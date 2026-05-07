@@ -1,0 +1,31 @@
+
+- login
+	- Parameter: email address, password hash
+	- Return: access token -> cookie
+	- Remark: Authenticate an user
+- auto login
+	- Parameter: access token
+- register
+	- Parameter: email address, password hash
+- *From this point all API will also take access token as parameter*
+- create course
+	- Parameter: class details
+	- Permission: Educators
+- join course
+	- Parameter: class code
+	- Permission: Everyone
+- create local card
+	- Parameter: card details
+	- Permission: Everyone
+- delete local card
+	- Parameter: card id
+	- Permission: Card owner
+- edit local card
+	- Parameter: card id, edited details
+	- Permission: Card owner
+- promote to public card
+	- Parameter: card id
+	- Permission: Educators
+- delete public card
+	- Parameter: card id
+	- Permission: Educator

@@ -1,4 +1,5 @@
 import { seedCourses, seedCards } from './seed';
+import api from './api';
 
 const COURSES_KEY = 'sr_courses';
 const CARDS_KEY = 'sr_cards';
@@ -6,7 +7,15 @@ const MS_PER_DAY = 86400000;
 
 function load(key, fallback) {
   try {
-    const raw = localStorage.getItem(key);
+    var raw = null;
+    if (import.meta.env.DEV)
+    {
+      raw = localStorage.getItem(key);
+    }
+    else
+    {
+      //raw = await api.get(key, { timeout: 5000 });
+    } 
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
@@ -17,10 +26,52 @@ function save(key, val) {
   localStorage.setItem(key, JSON.stringify(val));
 }
 
+// ── Async loadsave ──────────────────────────────────────────────────────────────────
+
+// In-memory cache
+let coursesCache = null;
+let fetchPromise = null;
+
+export async function fetchCourses() {
+  if (import.meta.env.DEV)
+  {
+    coursesCache = getCourses();
+    return coursesCache;
+  }
+
+  // Return cached result immediately if available
+  if (coursesCache) return coursesCache;
+
+  // Deduplicate in-flight requests (e.g. two components mounting at once)
+  if (fetchPromise) return fetchPromise;
+
+  fetchPromise = fetch('/api/courses')
+    .then((res) => {
+      if (!res.ok) throw new Error(`Failed to load courses: ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      coursesCache = data;
+      fetchPromise = null;
+      return data;
+    })
+    .catch((err) => {
+      fetchPromise = null; // allow retry on next call
+      throw err;
+    });
+
+  return fetchPromise;
+}
+
+// Call this after resetData() to bust the cache
+export function invalidateCoursesCache() {
+  coursesCache = null;
+}
+
 // ── Courses ──────────────────────────────────────────────────────────────────
 
 export function getCourses() {
-  return load(COURSES_KEY, seedCourses);
+  return coursesCache;
 }
 
 export function getCourse(id) {
