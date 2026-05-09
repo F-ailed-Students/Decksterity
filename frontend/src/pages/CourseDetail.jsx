@@ -83,6 +83,11 @@ export default function CourseDetail() {
               ? 'All caught up!'
               : `Start studying (${Math.min(limit, stats.due + stats.new)} cards)`}
           </button>
+
+          <button
+            className="btn-primary"
+            onClick={() => navigate(`/courses/${id}/edit`)}
+          >{'Edit your cards'}</button>
         </div>
       </main>
     </div>

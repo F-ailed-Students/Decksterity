@@ -742,6 +742,17 @@ html, body, #root {
   margin-top: 8px;
 }
 
+.error-404 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  flex-direction: column;
+  height: 100vh;
+  flex: 1;
+  padding: 40px 40px;
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────────────── */
 @media (max-width: 700px) {
   .sidebar { display: none; }
