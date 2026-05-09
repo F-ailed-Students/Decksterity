@@ -2,6 +2,7 @@
 :root {
   --bg: #F5F4F1;
   --surface: #FFFFFF;
+  --surface-highlight: #d5d5d5;
   --sidebar-bg: #1B3A3A;
   --sidebar-text: #C8D9D9;
   --sidebar-muted: #6B9999;
@@ -25,6 +26,7 @@
 [data-theme="dark"] {
   --bg: #111E1E;
   --surface: #1A2E2E;
+  --surface-highlight: #1e3838;
   --sidebar-bg: #0E1616;
   --text: #E0EDED;
   --text-muted: #8A9E9E;
@@ -225,13 +227,15 @@ html, body, #root {
   gap: 12px;
   position: relative;
   overflow: hidden;
-  transition: box-shadow 0.2s, transform 0.15s;
+  transition: box-shadow 0.2s, transform 0.15s, background 0.15s;
   cursor: default;
 }
 
 .course-card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
+  background: var(--surface-highlight);
+  cursor: pointer;
 }
 
 .course-card-accent {

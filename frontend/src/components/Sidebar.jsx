@@ -15,7 +15,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <div className="sidebar-logo">
         <BookOpen size={22} />
-        <span>MedRep</span>
+        <span>Spaced Repetition</span>
       </div>
 
       <nav className="sidebar-nav">

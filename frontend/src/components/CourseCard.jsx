@@ -2,7 +2,7 @@ import { getDueCards, getNewCards } from '../store';
 import { useState, useEffect } from 'react';
 import { Layers } from 'lucide-react';
 
-export default function CourseCard({ course, onStudy }) {
+export default function CourseCard({ course, onDetails, onStudy }) {
   const [due, setDue] = useState(0);
   const [newCount, setNewCount] = useState(0);
 
@@ -12,7 +12,7 @@ export default function CourseCard({ course, onStudy }) {
   }, [course.id]);
 
   return (
-    <div className="course-card" style={{ '--accent': course.color }}>
+    <div className="course-card" style={{ '--accent': course.color }} onClick={() => onDetails(course.id)}>
       <div className="course-card-accent" />
       <div className="course-card-body">
         <div className="course-icon">
@@ -30,7 +30,7 @@ export default function CourseCard({ course, onStudy }) {
       </div>
       <button
         className="btn-study"
-        onClick={() => onStudy(course.id)}
+        onClick={(e) => {e.stopPropagation(); onStudy(course.id)}}
         disabled={due === 0 && newCount === 0}
       >
         Study now

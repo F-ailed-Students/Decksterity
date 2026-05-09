@@ -10,11 +10,11 @@ function load(key, fallback) {
     var raw = null;
     if (import.meta.env.DEV)
     {
-      raw = localStorage.getItem(key);
+      raw = JSON.parse(localStorage.getItem(key));
     }
     else
     {
-      //raw = await api.get(key, { timeout: 5000 });
+      
     } 
     return raw ? JSON.parse(raw) : fallback;
   } catch {
@@ -35,7 +35,7 @@ let fetchPromise = null;
 export async function fetchCourses() {
   if (import.meta.env.DEV)
   {
-    coursesCache = getCourses();
+    coursesCache = load(COURSES_KEY, seedCourses)
     return coursesCache;
   }
 

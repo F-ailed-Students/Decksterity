@@ -21,6 +21,10 @@ export default function Dashboard() {
     navigate(`/study/${courseId}`);
   }
 
+  function handleCourseDetails(courseId) {
+    navigate(`/courses/${courseId}`);
+  }
+
   function handleReset() {
     if (window.confirm('Clear all memory and reset all cards?')) {
       resetData();
@@ -48,7 +52,7 @@ export default function Dashboard() {
         {!loading && !error && (
           <div className="course-grid">
             {courses.map((course) => (
-              <CourseCard key={course.id} course={course} onStudy={handleStudy} />
+              <CourseCard key={course.id} course={course} onStudy={handleStudy} onDetails={handleCourseDetails}/>
             ))}
           </div>
         )}
