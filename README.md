@@ -67,75 +67,73 @@ This application combines a modern React frontend with a FastAPI backend to prov
 ## Getting Started
 
 ### Prerequisites
-- Python 3.9+
-- Node.js 16+
-- npm or yarn
-- Docker and Docker Compose (optional)
+- Podman (or Docker)
+- Podman Compose
 
-### Backend Setup
+### Quick Start
 
-1. Navigate to the backend directory:
+1. Clone the repository:
 ```bash
-cd backend
+git clone <repository-url>
+cd cac-main
 ```
 
-2. Create a virtual environment:
+2. Build and run the application:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+podman-compose -f podman-compose.yml up --build
 ```
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+This will start both the backend and frontend services in containers.
 
-4. Run the development server:
-```bash
-uvicorn app.main:app --reload
-```
+3. Access the application:
+- **Frontend**: `http://localhost:3000` (or configured port)
+- **Backend API**: `http://localhost:8000`
 
-The backend will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Run the development server:
-```bash
-npm run dev
-```
-
-The frontend will be available at `http://localhost:5173`
-
-### Docker Setup
-
-To run the entire application using Docker Compose:
+### Stopping the Application
 
 ```bash
-docker-compose -f podman-compose.yml up
+podman-compose -f podman-compose.yml down
 ```
 
-This will start both the backend and frontend in containerized environments.
+### Building Images
 
-## Available Scripts
+To build the Docker images without running:
+```bash
+podman-compose -f podman-compose.yml build
+```
 
-### Frontend
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint to check code quality
+### Running Services
 
-### Backend
-- `uvicorn app.main:app --reload` - Start development server with auto-reload
+Run specific service:
+```bash
+podman-compose -f podman-compose.yml up backend
+podman-compose -f podman-compose.yml up frontend
+```
+
+### Development with Podman
+
+For development, you can view logs:
+```bash
+podman-compose -f podman-compose.yml logs -f
+```
+
+For a specific service:
+```bash
+podman-compose -f podman-compose.yml logs -f backend
+```
+
+## Container Services
+
+### Backend Service
+- Built from `backend/Dockerfile`
+- FastAPI application running on port 8000
+- Handles API requests and spaced repetition logic
+
+### Frontend Service
+- Built from `frontend/Dockerfile`
+- React application with Nginx
+- Serves the web interface
+- Uses nginx.conf for server configuration
 
 ## API Endpoints
 
