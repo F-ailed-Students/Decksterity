@@ -41,9 +41,9 @@ This application combines a modern React frontend with a FastAPI backend to prov
 .
 ├── backend/                    # FastAPI backend server
 │   ├── app/
-│   │   ├── algorithm_and_deck.py
+│   │   ├── model.py
 │   │   ├── db.py
-│   │   └── Deck.py
+│   │   └── [[ongoing work for authentication, upload data, store data, plus some issues]]
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/                   # React frontend application
