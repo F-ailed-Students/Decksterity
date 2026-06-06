@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getCourse, getCardsByCourse, fetchCourses } from '../store';
+import { getCourse, getCardsByCourse, fetchCourses, addCard } from '../store';
 import Sidebar from '../components/Sidebar';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 
@@ -8,6 +8,9 @@ export default function Editor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
+
+  const [newQuestion, setNewQuestion] = useState('');
+  const [newAnswer, setNewAnswer] = useState('');
 
   useEffect(() => {
     fetchCourses()
@@ -42,9 +45,25 @@ export default function Editor() {
         <div className="study-start-section">
           <h2 className="section-title">Add new card</h2>
 
+          <textarea
+            className="answer-input"
+            placeholder="Question"
+            value={newQuestion}
+            onChange={(e) => setNewQuestion(e.target.value)}
+            rows={3}
+          />
+
+          <textarea
+            className="answer-input"
+            placeholder="Answer"
+            value={newAnswer}
+            onChange={(e) => setNewAnswer(e.target.value)}
+            rows={5}
+          />
+
           <button
             className="btn-primary"
-            onClick={() => navigate(`/courses/${id}/edit`)}
+            onClick={() => addCard(course.id, newQuestion, newAnswer)}
           >{'Save'}</button>
         </div>
       </main>

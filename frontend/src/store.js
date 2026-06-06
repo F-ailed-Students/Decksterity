@@ -1,5 +1,6 @@
 import { seedCourses, seedCards } from './seed';
 import api from './api';
+import { dev_makeid } from './utils/utils'
 
 const COURSES_KEY = 'sr_courses';
 const CARDS_KEY = 'sr_cards';
@@ -96,6 +97,23 @@ export function getDueCards(courseId) {
 export function getNewCards(courseId) {
   return getCardsByCourse(courseId).filter((c) => c.new);
 }
+
+export function addCard(courseId, front, back) {
+  const c = getCards();
+  c.push({
+    id: dev_makeid(10),
+    courseId: courseId,
+    front: front,
+    back: back,
+    interval: 1,
+    ease: 2.5,
+    dueDate: Date.now(),
+    lastReviewed: null,
+    new: true,
+  });
+  save(CARDS_KEY, c);
+}
+
 
 // ── SM-2 Simplified ─────────────────────────────────────────────────────────
 // rating: 0 = Again, 1 = Hard, 2 = Good, 3 = Easy
