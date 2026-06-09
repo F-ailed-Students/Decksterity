@@ -114,6 +114,7 @@ class Flashcard:
     created_by: AccountPublic = field(default_factory=lambda: AccountPublic(id=0))
     subject: Optional[str] = None
     is_public: bool = False
+    last_reviewed: datetime | None = None
 
     # We can still provide a default value for FSRS state
     fsrs_state: Card = field(default_factory=Card)
@@ -131,9 +132,11 @@ class Flashcard:
         fsrs_rating = rating_map.get(rating_num, Rating.Good)
         
         # Calculate new state using global scheduler
-        new_state, _ = scheduler.review_card(self.fsrs_state, fsrs_rating, datetime.now())
+        current_datetime = datetime.now()
+        new_state, _ = scheduler.review_card(self.fsrs_state, fsrs_rating, current_datetime)
         self.fsrs_state = new_state
-        return new_state
+        self.last_reviewed = current_datetime
+        return new_state.due
 
     def is_due(self) -> bool:
         """Checks if the card is ready for study."""
@@ -149,7 +152,8 @@ class Flashcard:
             "Created By": self.created_by.display_name,
             "due": self.fsrs_state.due.isoformat(),
             "stability": round(self.fsrs_state.stability, 4),
-            "difficulty": round(self.fsrs_state.difficulty, 4)
+            "difficulty": round(self.fsrs_state.difficulty, 4),
+            "last_reviewed": self.last_reviewed
         }
 
 @dataclass
@@ -203,15 +207,41 @@ app = FastAPI(title="FSRS Memory API")
 # Simple storage in memory for now
 decks: Dict[str, Deck] = {"Default": Deck("Default")}
 
+
 def get_card_or_404(deck: Deck, card_id: int) -> Flashcard:
     card = next((c for c in deck.cards if c.id == card_id), None)
     if not card:
         raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")
     return card
 
+
+# TODO Get cards in all courses, return list of cards
+@app.get("/cards")
+def get_all_cards() -> List[Flashcard]:
+    pass 
+
+
+# TODO Get cards in specific course, return list of cards
+# Return 404 if deck not exist
+@app.get("/decks/{deck_name}/cards")
+def get_all_cards(deck: Deck, card_id: int) -> List[Flashcard]:
+    pass
+
+
+# TODO Get statistics (how many due, new, and reviewed today)
+@app.get("/stats")
+def get_statistics(deck: Deck, card_id: int) -> Dict[str, int]:
+    # New field added in the Flashcard class: last_reviewed
+    # Due when card is due, with is_due()
+    # New when last_reviewed is None
+    # Reviewed today is when last_reviewed is today
+    return {"due": 0, "new": 0, "reviewedToday": 0}
+
+
 @app.get("/decks")
 def list_decks():
     return list(decks.keys())
+
 
 @app.post("/decks/{deck_name}")
 def create_deck(deck_name: str):
@@ -220,7 +250,8 @@ def create_deck(deck_name: str):
     decks[deck_name] = Deck(deck_name)
     return {"message": f"Deck {deck_name} created"}
 
-@app.post("/decks/{deck_name}/cards")
+
+@app.post("/decks/{deck_name}/cards/add")
 def add_card(deck_name: str, data: CardCreate):
     if deck_name not in decks:
         raise HTTPException(status_code=404, detail="Deck not found")
@@ -235,11 +266,13 @@ def add_card(deck_name: str, data: CardCreate):
     )
     return {"message": "Card created successfully", "card": new_card.to_dict()}
 
+
 @app.get("/decks/{deck_name}/due")
 def get_due(deck_name: str):
     if deck_name not in decks:
         raise HTTPException(status_code=404, detail="Deck not found")
     return decks[deck_name].get_due_cards()
+
 
 @app.post("/review")
 def review(data: ReviewInput):
@@ -253,7 +286,21 @@ def review(data: ReviewInput):
     new_state = card.process_review(data.rating)
     return {"next_review": new_state.due.isoformat()}
 
-@app.patch("/decks/{deck_name}/cards/{card_id}")
+
+@app.post("/decks/{deck_name}/cards/{card_id}/rate")
+def rate_card(deck_name: str, card_id: int, rating: int):
+    deck = decks.get(deck_name)
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    
+    # Rate card
+    card = get_card_or_404(deck, card_id)
+    next_review = card.process_review(rating)
+    
+    return {"status": "rated", "next_interval": next_review.to_dict()}
+
+
+@app.patch("/decks/{deck_name}/cards/{card_id}/edit")
 def edit_card(deck_name: str, card_id: int, data: CardEdit):
     deck = decks.get(deck_name)
     if not deck:
@@ -269,3 +316,4 @@ def edit_card(deck_name: str, card_id: int, data: CardEdit):
     card.update_card(update_data)
     
     return {"status": "updated", "card": card.to_dict()}
+

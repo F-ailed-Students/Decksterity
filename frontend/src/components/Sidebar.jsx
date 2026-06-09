@@ -1,5 +1,5 @@
 import { Bell, BookOpen, Clock, CheckCircle, Sun, Moon } from 'lucide-react';
-import { getStats } from '../store';
+import { fetchStats } from '../store';
 import { useTheme } from '../context/ThemeProvider';
 import { useState, useEffect } from 'react';
 
@@ -8,7 +8,8 @@ export default function Sidebar() {
   const [stats, setStats] = useState({ due: 0, new: 0, reviewedToday: 0 });
 
   useEffect(() => {
-    setStats(getStats());
+    fetchStats().then(setStats)
+      .catch(console.error);
   }, []);
 
   return (

@@ -46,16 +46,13 @@ export default function Dashboard() {
           )}
         </div>
 
-        {loading && <div className="loading-indicator">Loading courses…</div>}
-        {error && <div className="error-message">⚠ {error}</div>}
-
-        {!loading && !error && (
+        <LoadingWaiter loading={loading} error={error}>
           <div className="course-grid">
             {courses.map((course) => (
               <CourseCard key={course.id} course={course} onStudy={handleStudy} onDetails={handleCourseDetails}/>
             ))}
           </div>
-        )}
+        </LoadingWaiter>
       </main>
     </div>
   );

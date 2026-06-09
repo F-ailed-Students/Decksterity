@@ -128,7 +128,7 @@ export const seedCards = [
     id: 'p2',
     courseId: 'pharmaco',
     front: 'What are the four main mechanisms of drug resistance?',
-    back: '1. Decreased uptake (e.g.,泵out by efflux pumps)\n2. Increased metabolism/breakdown (e.g., CYP450 induction)\n3. Altered target (e.g., receptor mutation)\n4. Bypass pathways (e.g., tumor cells)',
+    back: '1. Decreased uptake (e.g., out by efflux pumps)\n2. Increased metabolism/breakdown (e.g., CYP450 induction)\n3. Altered target (e.g., receptor mutation)\n4. Bypass pathways (e.g., tumor cells)',
     interval: 1,
     ease: 2.5,
     dueDate: Date.now(),
@@ -250,7 +250,7 @@ export const seedCards = [
   {
     id: 'pa6',
     courseId: 'pathology',
-    front: 'What are粥样硬化的主要并发症？',
+    front: 'What are?',
     back: 'Main complications of atherosclerosis:\n1. Plaque rupture → thrombosis (MI, stroke)\n2. Embolization (cholesterol emboli)\n3. Aneurysm formation (especially abdominal aorta)\n4. Chronic ischemia → organ fibrosis',
     interval: 3,
     ease: 2.5,
