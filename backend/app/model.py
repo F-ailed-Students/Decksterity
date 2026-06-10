@@ -230,7 +230,7 @@ def get_all_cards(deck: Deck, card_id: int) -> List[Flashcard]:
 
 # TODO Get statistics (how many due, new, and reviewed today)
 @app.get("/stats")
-def get_statistics(deck: Deck, card_id: int) -> Dict[str, int]:
+def get_statistics() -> Dict[str, int]:
     # New field added in the Flashcard class: last_reviewed
     # Due when card is due, with is_due()
     # New when last_reviewed is None
@@ -267,11 +267,13 @@ def add_card(deck_name: str, data: CardCreate):
     return {"message": "Card created successfully", "card": new_card.to_dict()}
 
 
-@app.get("/decks/{deck_name}/due")
-def get_due(deck_name: str):
+@app.get("/decks/{deck_name}/stats")
+def get_deck_statistics(deck_name: str):
     if deck_name not in decks:
         raise HTTPException(status_code=404, detail="Deck not found")
-    return decks[deck_name].get_due_cards()
+    return {"due": decks[deck_name].get_due_cards(), 
+            "new": 0,
+            "reviewedToday": 0}
 
 
 @app.post("/review")

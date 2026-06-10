@@ -1,4 +1,4 @@
-import { getDueCards, getNewCards } from '../store';
+import { getCourseStatistics, getDueCards, getNewCards } from '../store';
 import { useState, useEffect } from 'react';
 import { Layers } from 'lucide-react';
 
@@ -7,8 +7,11 @@ export default function CourseCard({ course, onDetails, onStudy }) {
   const [newCount, setNewCount] = useState(0);
 
   useEffect(() => {
-    setDue(getDueCards(course.id).length);
-    setNewCount(getNewCards(course.id).length);
+    getCourseStatistics(course)
+      .then((data) => {
+        setDue(data.due);
+        setNewCount(data.new);
+      })
   }, [course.id]);
 
   return (

@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getCourse, getDueCards, getNewCards, getCardsByCourse, fetchCards } from '../store';
+import { getCourse, getDueCards, getNewCards, getCardsByCourse, fetchCards, fetchCourses } from '../store';
 import Sidebar from '../components/Sidebar';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import LoadingWaiter from '../components/LoadingWaiter';
@@ -17,13 +17,11 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  if (!course) return null;
-
   useEffect(() => {
-    fetchCards(id)
-      .then(() => {
-        const c = getCourse(id);
-        if (!c) { navigate('/'); return; }
+    fetchCourses()
+    .then(() => fetchCards(id))
+      .then((data) => {
+        const c = getCourse(id)
         setCourse(c);
         setStats({
           due: getDueCards(id).length,
@@ -31,9 +29,11 @@ export default function CourseDetail() {
           total: getCardsByCourse(id).length,
         });
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {setError(err.message); console.error(err)})
       .finally(() => setLoading(false));
   }, [id, navigate]);
+
+  if (!course) return null;
 
   return (
     <div className="app-shell">
@@ -102,7 +102,6 @@ export default function CourseDetail() {
             >{'Edit your cards'}</button>
           </div>
         </LoadingWaiter>
-
       </main>
     </div>
   );

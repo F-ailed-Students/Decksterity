@@ -38,11 +38,11 @@ export async function fetchCourses() {
   if (IS_DEV)
   {
     coursesCache = load(COURSES_KEY, seedCourses)
+    for (var c in coursesCache){
+      await fetchCards(c.id)
+    }
     return coursesCache;
   }
-
-  // Return cached result immediately if available
-  if (coursesCache) return coursesCache;
 
   // Deduplicate in-flight requests (e.g. two components mounting at once)
   if (fetchPromise) return fetchPromise;
@@ -107,6 +107,8 @@ export function getCourses() {
 }
 
 export function getCourse(id) {
+  console.log("LOADME:", id);
+  console.log("THING:", getCourses());
   return getCourses().find((c) => c.id === id);
 }
 
@@ -204,7 +206,38 @@ export function resetData() {
 
 // ── Stats ────────────────────────────────────────────────────────────────────
 
+export async function getCourseStatistics(course) {
+  if (IS_DEV) {
+    console.log("The course obj: ", course)
+    console.log("Its id: ", course.id)
+    fetchCards(course.id)
+    const now = Date.now();
+    return { 
+      "due": getCardsByCourse(course.id).filter((c) => c.dueDate <= now).length,
+      "new": getCardsByCourse(course.id).filter((c) => c.new).length,
+      "reviewedToday": 0
+    };
+  }
+  return api.get(`/decks/${course.name}/stats`)
+}
+
 export async function fetchStats() {
+  if (IS_DEV)
+  {
+    var all_stat = {"due": 0, "new": 0, "reviewedToday": 0}
+    console.log("All courses:", getCourses())
+    for (var c of getCourses())
+    {
+      console.log(c)
+      var stat = await getCourseStatistics(c)
+      for (var k in all_stat)
+      {
+        all_stat[k] += stat[k]
+      }
+    }
+    return all_stat
+  }
+
   try {
     const data = await api.get(`/stats`);
     return data;
