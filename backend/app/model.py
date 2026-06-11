@@ -200,7 +200,7 @@ class ReviewInput(BaseModel):
 
 app = FastAPI(title="FSRS Memory API")
 
-# Simple storage in memory for now
+# Simple storage in memory for now, we call list of decks from this for now
 decks: Dict[str, Deck] = {"Default": Deck("Default")}
 
 def get_card_or_404(deck: Deck, card_id: int) -> Flashcard:
@@ -208,30 +208,6 @@ def get_card_or_404(deck: Deck, card_id: int) -> Flashcard:
     if not card:
         raise HTTPException(status_code=404, detail=f"Card with ID {card_id} not found")
     return card
-
-
-# TODO Get cards in all courses, return list of cards
-@app.get("/cards")
-def get_all_cards() -> List[Flashcard]:
-    pass 
-
-
-# TODO Get cards in specific course, return list of cards
-# Return 404 if deck not exist
-@app.get("/decks/{deck_name}/cards")
-def get_all_cards(deck: Deck, card_id: int) -> List[Flashcard]:
-    pass
-
-
-# TODO Get statistics (how many due, new, and reviewed today)
-@app.get("/stats")
-def get_statistics() -> Dict[str, int]:
-    # New field added in the Flashcard class: last_reviewed
-    # Due when card is due, with is_due()
-    # New when last_reviewed is None
-    # Reviewed today is when last_reviewed is today
-    return {"due": 0, "new": 0, "reviewedToday": 0}
-
 
 @app.get("/decks")
 def list_decks():
@@ -259,6 +235,7 @@ def add_card(deck_name: str, data: CardCreate):
     )
     return {"message": "Card created successfully", "card": new_card.to_dict()}
 
+# get all cards in a deck/specific subject, return dictionary due to how JSON interacts
 @app.get("/decks/{deck_name}/cards")
 def get_all_cards(deck_name: str):
     """Returns a list of all cards inside a specific deck."""
@@ -266,12 +243,35 @@ def get_all_cards(deck_name: str):
         raise HTTPException(status_code=404, detail="Deck not found")
     return [card.to_dict() for card in decks[deck_name].cards]
 
-@app.get("/decks/{deck_name}/stats")
-def get_deck_statistics(deck_name: str):
-    if deck_name not in decks:
-        raise HTTPException(status_code=404, detail="Deck not found")
-    return decks[deck_name].get_due_cards()
+# get all cards GLOBALLY
+@app.get("/cards") 
+def get_all_cards_global() -> List[Flashcard]:
+    """Returns a list of ALL cards across all decks, regardless of deck association. May cause lag"""
+    return [card.to_dict() for deck in decks.values() for card in deck.cards]
 
+# Get statistics (how many due, new, and reviewed today)
+@app.get("/stats")
+def get_statistics() -> Dict[str, int]:
+    due_count = 0
+    new_count = 0
+    reviewed_today_count = 0
+    now = datetime.now()
+    
+    for deck in decks.values():
+        for card in deck.cards:
+            # Due when card is due, with is_due()
+            if card.is_due():
+                due_count += 1
+            
+            # New when last_reviewed is None
+            if card.last_reviewed is None:
+                new_count += 1
+            
+            # Reviewed today is when last_reviewed is today
+            if card.last_reviewed is not None and card.last_reviewed.date() == now.date():
+                reviewed_today_count += 1
+                
+    return {"due": due_count, "new": new_count, "reviewedToday": reviewed_today_count}
 
 @app.post("/review")
 def review(data: ReviewInput):
