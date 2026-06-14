@@ -80,10 +80,10 @@ cd cac-main
 
 2. Build and run the application:
 ```bash
-podman-compose -f podman-compose.yml up --build
+podman compose up --build --force-recreate --detach
 ```
 
-This will start both the backend and frontend services in containers.
+This will start both the backend and frontend services in containers, and replace previous builds if exists.
 
 3. Access the application:
 - **Frontend**: `http://localhost:3000` (or configured port)

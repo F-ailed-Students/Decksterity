@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fsrs import Scheduler, Card, Rating, ReviewLog 
 from typing import Dict, List, Optional
 from fastapi.middleware.cors import CORSMiddleware
+import secrets
 
 # enum to represent user types
 class UserType(str, Enum):
@@ -154,6 +155,7 @@ class Flashcard:
 
 @dataclass
 class Deck:
+    id: str
     name: str
     cards: List[Flashcard] = field(default_factory=list)
 
@@ -176,7 +178,18 @@ class Deck:
         self.cards.append(new_card)
         return new_card # Return the card object instead of just the ID for better API responses
     
+    def to_dict(self):
+        """Converts object to dictionary for the API response."""
+        return {
+            "id": self.id,
+            "name": self.name,
+        }
+
+
 # --- API DATA MODELS ---
+
+class DeckCreate(BaseModel):
+    name: str
 
 class CardCreate(BaseModel):
     front: str
@@ -192,7 +205,7 @@ class CardEdit(BaseModel):
     is_public: Optional[bool] = None
 
 class ReviewInput(BaseModel):
-    deck_name: str
+    deck_id: str
     card_id: int
     rating: int
 
@@ -205,9 +218,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 # Simple storage in memory for now, we call list of decks from this for now
-decks: Dict[str, Deck] = {"Default": Deck("Default")}
+decks: Dict[str, Deck] = {"default": Deck("default", "Default Deck")}
 
 def get_card_or_404(deck: Deck, card_id: int) -> Flashcard:
     card = next((c for c in deck.cards if c.id == card_id), None)
@@ -217,22 +229,21 @@ def get_card_or_404(deck: Deck, card_id: int) -> Flashcard:
 
 @app.get("/decks")
 def list_decks():
-    return list(decks.keys())
+    return [deck.to_dict() for deck in decks.values()]
 
-@app.post("/decks/{deck_name}")
-def create_deck(deck_name: str):
-    if deck_name in decks:
-        raise HTTPException(status_code=400, detail="Deck exists")
-    decks[deck_name] = Deck(deck_name)
-    return {"message": f"Deck {deck_name} created"}
+@app.post("/deck_create")
+def create_deck(data: DeckCreate):
+    deck_id = data.name[:8] + '_' + secrets.token_urlsafe(6)
+    decks[deck_id] = Deck(deck_id, data.name)
+    return {"message": f"Deck {data.name} created, id: {deck_id}"}
 
-@app.post("/decks/{deck_name}/cards/add")
-def add_card(deck_name: str, data: CardCreate):
-    if deck_name not in decks:
+@app.post("/decks/{deck_id}/cards/add")
+def add_card(deck_id: str, data: CardCreate):
+    if deck_id not in decks:
         raise HTTPException(status_code=404, detail="Deck not found")
     
     # Pass all the newly supported fields to the deck method
-    new_card = decks[deck_name].add_card(
+    new_card = decks[deck_id].add_card(
         front=data.front, 
         back=data.back,
         subject=data.subject,
@@ -242,12 +253,12 @@ def add_card(deck_name: str, data: CardCreate):
     return {"message": "Card created successfully", "card": new_card.to_dict()}
 
 # get all cards in a deck/specific subject, return dictionary due to how JSON interacts
-@app.get("/decks/{deck_name}/cards")
-def get_all_cards(deck_name: str):
+@app.get("/decks/{deck_id}/cards")
+def get_all_cards(deck_id: str):
     """Returns a list of all cards inside a specific deck."""
-    if deck_name not in decks:
+    if deck_id not in decks:
         raise HTTPException(status_code=404, detail="Deck not found")
-    return [card.to_dict() for card in decks[deck_name].cards]
+    return [card.to_dict() for card in decks[deck_id].cards]
 
 # get all cards GLOBALLY
 @app.get("/cards") 
@@ -280,14 +291,14 @@ def get_statistics() -> Dict[str, int]:
     return {"due": due_count, "new": new_count, "reviewedToday": reviewed_today_count}
 
 
-@app.get("/decks/${deck_name}/stats")
-def get_course_statistics(deck_name: str) -> Dict[str, int]:
+@app.get("/decks/${deck_id}/stats")
+def get_course_statistics(deck_id: str) -> Dict[str, int]:
     due_count = 0
     new_count = 0
     reviewed_today_count = 0
     now = datetime.now()
     
-    deck = decks[deck_name]
+    deck = decks[deck_id]
     for card in deck.cards:
         # Due when card is due, with is_due()
         if card.is_due():
@@ -306,7 +317,7 @@ def get_course_statistics(deck_name: str) -> Dict[str, int]:
 
 @app.post("/review")
 def review(data: ReviewInput):
-    deck = decks.get(data.deck_name)
+    deck = decks.get(data.deck_id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
     
@@ -316,9 +327,9 @@ def review(data: ReviewInput):
     new_state = card.process_review(data.rating)
     return {"next_review": new_state.due.isoformat()}
 
-@app.patch("/decks/{deck_name}/cards/{card_id}")
-def edit_card(deck_name: str, card_id: int, data: CardEdit):
-    deck = decks.get(deck_name)
+@app.patch("/decks/{deck_id}/cards/{card_id}")
+def edit_card(deck_id: str, card_id: int, data: CardEdit):
+    deck = decks.get(deck_id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
     

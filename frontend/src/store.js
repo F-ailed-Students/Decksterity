@@ -218,7 +218,7 @@ export async function getCourseStatistics(course) {
       "reviewedToday": 0
     };
   }
-  return api.get(`/decks/${course.name}/stats`)
+  return api.get(`/decks/${course.id}/stats`)
 }
 
 export async function fetchStats() {
