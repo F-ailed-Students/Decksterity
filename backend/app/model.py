@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from fastapi import FastAPI, HTTPException
 from fsrs import Scheduler, Card, Rating, ReviewLog 
 from typing import Dict, List, Optional
-
+from fastapi.middleware.cors import CORSMiddleware
 
 # enum to represent user types
 class UserType(str, Enum):
@@ -199,7 +199,13 @@ class ReviewInput(BaseModel):
 # --- THE API ENDPOINTS ---
 
 app = FastAPI(title="FSRS Memory API")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # your frontend URL
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 # Simple storage in memory for now, we call list of decks from this for now
 decks: Dict[str, Deck] = {"Default": Deck("Default")}
 
@@ -220,7 +226,7 @@ def create_deck(deck_name: str):
     decks[deck_name] = Deck(deck_name)
     return {"message": f"Deck {deck_name} created"}
 
-@app.post("/decks/{deck_name}/cards")
+@app.post("/decks/{deck_name}/cards/add")
 def add_card(deck_name: str, data: CardCreate):
     if deck_name not in decks:
         raise HTTPException(status_code=404, detail="Deck not found")
@@ -272,6 +278,31 @@ def get_statistics() -> Dict[str, int]:
                 reviewed_today_count += 1
                 
     return {"due": due_count, "new": new_count, "reviewedToday": reviewed_today_count}
+
+
+@app.get("/decks/${deck_name}/stats")
+def get_course_statistics(deck_name: str) -> Dict[str, int]:
+    due_count = 0
+    new_count = 0
+    reviewed_today_count = 0
+    now = datetime.now()
+    
+    deck = decks[deck_name]
+    for card in deck.cards:
+        # Due when card is due, with is_due()
+        if card.is_due():
+            due_count += 1
+        
+        # New when last_reviewed is None
+        if card.last_reviewed is None:
+            new_count += 1
+        
+        # Reviewed today is when last_reviewed is today
+        if card.last_reviewed is not None and card.last_reviewed.date() == now.date():
+            reviewed_today_count += 1
+                
+    return {"due": due_count, "new": new_count, "reviewedToday": reviewed_today_count}
+
 
 @app.post("/review")
 def review(data: ReviewInput):
