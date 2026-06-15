@@ -144,7 +144,10 @@ export function addCard(courseId, front, back) {
     save(CARDS_KEY, c);
   }
   else {
-    
+    api.post(`decks/${courseId}/cards/add`, {
+      front: front,
+      back: back
+    })
   }
 }
 
@@ -218,7 +221,7 @@ export async function getCourseStatistics(course) {
       "reviewedToday": 0
     };
   }
-  return api.get(`/decks/${course.name}/stats`)
+  return api.get(`/decks/${course.id}/stats`)
 }
 
 export async function fetchStats() {
