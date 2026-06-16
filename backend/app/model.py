@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from fastapi import FastAPI, HTTPException
 from fsrs import Scheduler, Card, Rating, ReviewLog 
 from typing import Dict, List, Optional
-from fastapi.middleware.cors import CORSMiddleware
 import secrets
 
 # enum to represent user types
@@ -212,12 +211,7 @@ class ReviewInput(BaseModel):
 # --- THE API ENDPOINTS ---
 
 app = FastAPI(title="FSRS Memory API")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # your frontend URL
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
 # Simple storage in memory for now, we call list of decks from this for now
 decks: Dict[str, Deck] = {"default": Deck("default", "Default Deck")}
 
