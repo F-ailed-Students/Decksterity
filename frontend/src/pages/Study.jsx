@@ -39,7 +39,11 @@ export default function Study() {
 
   const handleRate = useCallback((rating, userAnswer) => {
     const card = queue[index];
-    rateCard(card.id, rating);
+    console.log(course)
+    console.log(course.id)
+    console.log(card.id)
+    console.log(rating)
+    rateCard(course.id, card.id, rating);
     setStudied((s) => s + 1);
     if (rating === 0) setAgainCount((a) => a + 1);
 

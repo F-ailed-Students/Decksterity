@@ -14,9 +14,9 @@ class UserType(str, Enum):
     TEACHER = "Teacher"
 
 class AccountBase(BaseModel):
-    email: EmailStr
-    display_name: str
-    account_type: UserType
+    email: EmailStr = ""
+    display_name: str = ""
+    account_type: UserType = UserType.STUDENT
     id: Optional[int] = None  # Assigned by the database
 
 # 2. For Registration (What the user sends)
@@ -131,13 +131,16 @@ class Flashcard:
         fsrs_rating = rating_map.get(rating_num, Rating.Good)
         
         # Calculate new state using global scheduler
-        new_state, _ = scheduler.review_card(self.fsrs_state, fsrs_rating, datetime.now())
+        new_state, _ = scheduler.review_card(self.fsrs_state, fsrs_rating, datetime.now(tz=None))
         self.fsrs_state = new_state
         return new_state
 
     def is_due(self) -> bool:
         """Checks if the card is ready for study."""
-        return self.fsrs_state.due <= datetime.now()
+        return self.fsrs_state.due.replace(tzinfo=None) <= datetime.now(tz=None)
+
+    def last_reviewed(self):
+        return self.fsrs_state.last_review
 
     def to_dict(self):
         """Converts object to dictionary for the API response."""
@@ -147,9 +150,11 @@ class Flashcard:
             "back": self.back,
             "subject": self.subject,
             "Created By": self.created_by.display_name,
-            "due": self.fsrs_state.due.isoformat(),
-            "stability": round(self.fsrs_state.stability, 4),
+            "due": int(self.fsrs_state.due.timestamp() * 1000),
+            "stability": round(self.fsrs_state.stability, 4) 
+                if self.fsrs_state.stability is not None else None,
             "difficulty": round(self.fsrs_state.difficulty, 4)
+                if self.fsrs_state.stability is not None else None
         }
 
 @dataclass
@@ -160,8 +165,8 @@ class Deck:
 
     def get_due_cards(self) -> List[Flashcard]:
         """Filters cards based on the FSRS 'due' timestamp."""
-        now = datetime.now()
-        return [c for c in self.cards if c.fsrs_state.due <= now]
+        now = datetime.now(tz=None)
+        return [c for c in self.cards if c.fsrs_state.due.replace(tzinfo=None) <= now]
     
     def add_card(self, front: str, back: str, subject: Optional[str] = None, 
                  is_public: bool = False, created_by: Optional[AccountPublic] = None):
@@ -266,7 +271,7 @@ def get_statistics() -> Dict[str, int]:
     due_count = 0
     new_count = 0
     reviewed_today_count = 0
-    now = datetime.now()
+    now = datetime.now(tz=None)
     
     for deck in decks.values():
         for card in deck.cards:
@@ -275,22 +280,23 @@ def get_statistics() -> Dict[str, int]:
                 due_count += 1
             
             # New when last_reviewed is None
-            if card.last_reviewed is None:
+            if card.last_reviewed() is None:
                 new_count += 1
             
             # Reviewed today is when last_reviewed is today
-            if card.last_reviewed is not None and card.last_reviewed.date() == now.date():
+            if card.last_reviewed() is not None \
+            and card.last_reviewed().replace(tzinfo=None).date() == now.date():
                 reviewed_today_count += 1
                 
     return {"due": due_count, "new": new_count, "reviewedToday": reviewed_today_count}
 
 
-@app.get("/decks/${deck_id}/stats")
+@app.get("/decks/{deck_id}/stats")
 def get_course_statistics(deck_id: str) -> Dict[str, int]:
     due_count = 0
     new_count = 0
     reviewed_today_count = 0
-    now = datetime.now()
+    now = datetime.now(tz=None)
     
     deck = decks[deck_id]
     for card in deck.cards:
@@ -299,11 +305,12 @@ def get_course_statistics(deck_id: str) -> Dict[str, int]:
             due_count += 1
         
         # New when last_reviewed is None
-        if card.last_reviewed is None:
+        if card.last_reviewed() is None:
             new_count += 1
         
         # Reviewed today is when last_reviewed is today
-        if card.last_reviewed is not None and card.last_reviewed.date() == now.date():
+        if card.last_reviewed() is not None \
+        and card.last_reviewed().replace(tzinfo=None).date() == now.date():
             reviewed_today_count += 1
                 
     return {"due": due_count, "new": new_count, "reviewedToday": reviewed_today_count}
@@ -319,7 +326,7 @@ def review(data: ReviewInput):
     card = get_card_or_404(deck, data.card_id)
     
     new_state = card.process_review(data.rating)
-    return {"next_review": new_state.due.isoformat()}
+    return {"next_review": int(new_state.due.timestamp() * 1000)}
 
 @app.patch("/decks/{deck_id}/cards/{card_id}")
 def edit_card(deck_id: str, card_id: int, data: CardEdit):

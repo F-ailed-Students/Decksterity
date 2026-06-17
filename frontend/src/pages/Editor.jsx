@@ -63,7 +63,11 @@ export default function Editor() {
 
           <button
             className="btn-primary"
-            onClick={() => addCard(course.id, newQuestion, newAnswer)}
+            onClick={() => {
+              addCard(course.id, newQuestion, newAnswer);
+              setNewQuestion("");
+              setNewAnswer("");
+            }}
           >{'Save'}</button>
         </div>
       </main>

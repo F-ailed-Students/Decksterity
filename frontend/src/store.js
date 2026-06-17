@@ -84,10 +84,10 @@ export async function fetchCards(courseId) {
   if (cardFetchPromise) return cardFetchPromise;
 
   cardFetchPromise = api.get(`/decks/${courseId}/cards`)
-    .then((data) => {
-      cardCache[courseId] = data;
+    .then((res) => {
+      cardCache[courseId] = res.data;
       cardFetchPromise = null;
-      return data;
+      return cardCache[courseId];
     })
     .catch((err) => {
       cardFetchPromise = null; // allow retry on next call
@@ -120,7 +120,8 @@ export function getCardsByCourse(courseId) {
 
 export function getDueCards(courseId) {
   const now = Date.now();
-  return getCardsByCourse(courseId).filter((c) => c.dueDate <= now);
+  console.log("THE CARDs:", getCardsByCourse(courseId))
+  return getCardsByCourse(courseId).filter((c) => c.due <= now);
 }
 
 export function getNewCards(courseId) {
@@ -137,7 +138,7 @@ export function addCard(courseId, front, back) {
       back: back,
       interval: 1,
       ease: 2.5,
-      dueDate: Date.now(),
+      due: Date.now(),
       lastReviewed: null,
       new: true,
     });
@@ -146,7 +147,8 @@ export function addCard(courseId, front, back) {
   else {
     api.post(`decks/${courseId}/cards/add`, {
       front: front,
-      back: back
+      back: back,
+      is_public: false
     })
   }
 }
@@ -158,7 +160,9 @@ export function addCard(courseId, front, back) {
 export function rateCard(courseId, cardId, rating) {
   if (IS_DEV) dev_rateCard(cardId, rating)
   else {
-    api.post(`/decks/${courseId}/cards/${cardId}/rate`, {
+    api.post(`review`, {
+      deck_id: courseId,
+      card_id: cardId,
       rating: rating
     })
   }
@@ -193,7 +197,7 @@ function dev_rateCard(cardId, rating) {
     }
   }
 
-  card.dueDate = Date.now() + card.interval * MS_PER_DAY;
+  card.due = Date.now() + card.interval * MS_PER_DAY;
   card.lastReviewed = Date.now();
 
   cards[idx] = card;
@@ -216,7 +220,7 @@ export async function getCourseStatistics(course) {
     fetchCards(course.id)
     const now = Date.now();
     return { 
-      "due": getCardsByCourse(course.id).filter((c) => c.dueDate <= now).length,
+      "due": getCardsByCourse(course.id).filter((c) => c.due <= now).length,
       "new": getCardsByCourse(course.id).filter((c) => c.new).length,
       "reviewedToday": 0
     };

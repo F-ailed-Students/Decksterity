@@ -17,7 +17,7 @@ master_app.add_middleware(
 
 # 3. Mount the sub-applications to specific URL paths
 master_app.mount("/db", db_app)
-master_app.mount("/model", model_app)
+master_app.mount("/api", model_app)
 
 if __name__ == "__main__":
     # 4. Tell Uvicorn to run the 'master_app'

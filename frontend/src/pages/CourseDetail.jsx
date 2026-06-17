@@ -28,6 +28,7 @@ export default function CourseDetail() {
           new: getNewCards(id).length,
           total: getCardsByCourse(id).length,
         });
+        console.log(getCardsByCourse(id));
       })
       .catch((err) => {setError(err.message); console.error(err)})
       .finally(() => setLoading(false));

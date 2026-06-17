@@ -1,8 +1,4 @@
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
-import FlashCard from '../components/FlashCard';
-import { getCourse, getDueCards, getNewCards, rateCard } from '../store';
-import { ArrowLeft, CheckCircle, Sun, Moon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeProvider';
 
 export default function Error404() {
