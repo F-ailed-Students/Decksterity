@@ -246,8 +246,8 @@ export async function fetchStats() {
   }
 
   try {
-    const data = await api.get(`/stats`);
-    return data;
+    const res = await api.get(`/stats`);
+    return res.data;
   } catch (err) {
     const status = err.response?.status; // e.g. 404, 500
     const message = err.response?.data?.detail; // FastAPI error detail

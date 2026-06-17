@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from fastapi import FastAPI, HTTPException
 from fsrs import Scheduler, Card, Rating, ReviewLog 
@@ -98,7 +98,7 @@ class StudyService:
         updated_card, review_log = self.scheduler.review_card(
             card_obj, 
             rating, 
-            datetime.now()
+            datetime.now(timezone.utc)
         )
         
         return updated_card, review_log
@@ -110,7 +110,7 @@ class Flashcard:
     id: int
     front: str
     back: str
-    date_created: datetime = field(default_factory=datetime.now)
+    date_created: datetime = field(default_factory=datetime.utcnow)
     created_by: AccountPublic = field(default_factory=lambda: AccountPublic(id=0))
     subject: Optional[str] = None
     is_public: bool = False
@@ -131,7 +131,7 @@ class Flashcard:
         fsrs_rating = rating_map.get(rating_num, Rating.Good)
         
         # Calculate new state using global scheduler
-        new_state, _ = scheduler.review_card(self.fsrs_state, fsrs_rating, datetime.now(tz=None))
+        new_state, _ = scheduler.review_card(self.fsrs_state, fsrs_rating, datetime.now(timezone.utc))
         self.fsrs_state = new_state
         return new_state
 
@@ -275,18 +275,18 @@ def get_statistics() -> Dict[str, int]:
     
     for deck in decks.values():
         for card in deck.cards:
-            # Due when card is due, with is_due()
-            if card.is_due():
-                due_count += 1
             
             # New when last_reviewed is None
             if card.last_reviewed() is None:
                 new_count += 1
             
             # Reviewed today is when last_reviewed is today
-            if card.last_reviewed() is not None \
-            and card.last_reviewed().replace(tzinfo=None).date() == now.date():
+            elif card.last_reviewed().replace(tzinfo=None).date() == now.date():
                 reviewed_today_count += 1
+
+            # Due when card is due, with is_due()
+            elif card.is_due():
+                due_count += 1
                 
     return {"due": due_count, "new": new_count, "reviewedToday": reviewed_today_count}
 
