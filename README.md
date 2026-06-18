@@ -75,7 +75,7 @@ This application combines a modern React frontend with a FastAPI backend to prov
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd cac-main
+cd Decksterity
 ```
 
 2. Build and run the application:
