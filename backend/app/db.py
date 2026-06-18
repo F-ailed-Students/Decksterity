@@ -1,3 +1,4 @@
+import os
 import jwt
 from fastapi import FastAPI, HTTPException, Header, Depends, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -9,11 +10,13 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 # --- 1. CONFIGURATION & SECURITY ---
-SECRET_KEY = "super_secret_key_change_this_in_production"
+SECRET_KEY = os.getenv("DECKSTERITY_SECRET_KEY") 
+if not SECRET_KEY:
+    raise ValueError("FATAL: No DECKSTERITY_SECRET_KEY set in the environment!")
 ALGORITHM = "HS256"
 security = HTTPBearer()
 
-# Initialize the Argon2 hasher
+# PH(password hasher)
 ph = PasswordHasher()
 
 # --- 2. DYNAMIC DATABASE POOL SETUP ---
