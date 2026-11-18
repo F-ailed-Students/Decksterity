@@ -1,9 +1,9 @@
 version: "3.9"
 
 services:
-  db:
+  card_db:
     image: postgres:15
-    container_name: db
+    container_name: card_db
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -13,9 +13,9 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  backend:
+  card_backend:
     build: ./backend
-    container_name: backend
+    container_name: card_backend
     depends_on:
       - db
     environment:
@@ -24,13 +24,13 @@ services:
     ports:
       - "8000:8000"
 
-  frontend:
+  card_frontend:
     build: ./frontend
-    container_name: frontend
+    container_name: card_frontend
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      - card_backend
 
 volumes:
   db_data:

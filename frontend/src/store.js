@@ -242,6 +242,7 @@ export async function fetchStats() {
         all_stat[k] += stat[k]
       }
     }
+      
     return all_stat
   }
 

@@ -48,11 +48,11 @@ export default function Dashboard() {
             )}
           </div>
 
-            <div className="course-grid">
-              {courses.map((course) => (
-                <CourseCard key={course.id} course={course} onStudy={handleStudy} onDetails={handleCourseDetails}/>
-              ))}
-            </div>
+          <div className="course-grid">
+            {courses.map((course) => (
+              <CourseCard key={course.id} course={course} onStudy={handleStudy} onDetails={handleCourseDetails}/>
+            ))}
+          </div>
         </main>
       </LoadingWaiter>
     </div>
