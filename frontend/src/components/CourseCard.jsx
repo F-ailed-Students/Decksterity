@@ -12,6 +12,10 @@ export default function CourseCard({ course, onDetails, onStudy }) {
         setDue(data.due);
         setNewCount(data.new);
       })
+      .catch(() => {
+        setDue(0);
+        setNewCount(0);
+      });
   }, [course]);
 
   return (
@@ -32,8 +36,12 @@ export default function CourseCard({ course, onDetails, onStudy }) {
         </div>
       </div>
       <button
+        type="button"
         className="btn-study"
-        onClick={(e) => {e.stopPropagation(); onStudy(course.id)}}
+        onClick={(event) => {
+          event.stopPropagation();
+          onStudy(course.id);
+        }}
         disabled={due === 0 && newCount === 0}
       >
         Study now

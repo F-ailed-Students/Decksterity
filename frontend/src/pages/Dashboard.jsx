@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
+import PageLayout from '../components/PageLayout';
 import CourseCard from '../components/CourseCard';
 import { fetchCourses, resetData, invalidateCoursesCache } from '../store';
 import { useState, useEffect } from 'react';
@@ -35,26 +35,23 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="app-shell">
+    <PageLayout>
       <LoadingWaiter loading={loading} error={error}>
-        <Sidebar />
-        <main className="main-content">
-          <div className="page-header">
-            <h1 className="page-title">Your Courses</h1>
-            {import.meta.env.DEV && (
-              <button className="btn-dev-reset" onClick={handleReset}>
-                Clear all memory
-              </button>
-            )}
-          </div>
+        <div className="page-header">
+          <h1 className="page-title">Your Courses</h1>
+          {import.meta.env.DEV && (
+            <button className="btn-dev-reset" onClick={handleReset}>
+              Clear all memory
+            </button>
+          )}
+        </div>
 
-          <div className="course-grid">
-            {courses.map((course) => (
-              <CourseCard key={course.id} course={course} onStudy={handleStudy} onDetails={handleCourseDetails}/>
-            ))}
-          </div>
-        </main>
+        <div className="course-grid">
+          {courses.map((course) => (
+            <CourseCard key={course.id} course={course} onStudy={handleStudy} onDetails={handleCourseDetails}/>
+          ))}
+        </div>
       </LoadingWaiter>
-    </div>
+    </PageLayout>
   );
 }
