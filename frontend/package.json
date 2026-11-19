@@ -8,6 +8,8 @@
     "build": "vite build",
     "build:debug": "vite build --debug --sourcemap true --minify false",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -27,6 +29,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
-    "vite": "^8.0.3"
+    "vite": "^8.0.3",
+    "vitest": "^5.1.1"
   }
 }
