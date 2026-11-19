@@ -8,16 +8,10 @@ const MS_PER_DAY = 86400000;
 const IS_DEV = import.meta.env.DEV
 
 function load(key, fallback) {
-  try {
-    var raw = null;
-    if (IS_DEV)
-    {
-      raw = JSON.parse(localStorage.getItem(key));
-    }
-    else
-    {
+  if (!IS_DEV) return fallback;
 
-    } 
+  try {
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
@@ -130,7 +124,7 @@ export function getNewCards(courseId) {
 
 export function addCard(courseId, front, back) {
   if (IS_DEV) {
-    const c = getCards();
+    const c = dev_getCards();
     c.push({
       id: dev_makeid(10),
       courseId: courseId,

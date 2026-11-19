@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { AuthContext } from './AuthContext';
 
 const AUTH_STORAGE_KEY = 'sr_account_profile';
-const AuthContext = createContext(null);
 
 function readStoredUser() {
   try {
@@ -60,8 +60,4 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

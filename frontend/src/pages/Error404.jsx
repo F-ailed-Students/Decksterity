@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../context/ThemeProvider';
 
 export default function Error404() {
-  const { dark, toggle } = useTheme();
   const navigate = useNavigate();
 
   return (

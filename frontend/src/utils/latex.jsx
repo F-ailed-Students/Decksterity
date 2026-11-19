@@ -3,7 +3,7 @@ import 'katex/dist/katex.min.css';
 
 function renderLatex(text) {
   const blockPattern = /\$\$([\s\S]*?)\$\$/g;
-  const inlinePattern = /\$([^\$\n]+?)\$/g;
+  const inlinePattern = /\$([^$\n]+?)\$/g;
 
   let result = text;
 

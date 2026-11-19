@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getCourse, getCardsByCourse, fetchCourses, addCard } from '../store';
+import { getCourse, fetchCourses, addCard } from '../store';
 import Sidebar from '../components/Sidebar';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 
@@ -14,7 +14,7 @@ export default function Editor() {
 
   useEffect(() => {
     fetchCourses()
-        .then((_) => {
+        .then(() => {
             const c = getCourse(id);
             if (!c) { navigate('/'); return; }
             setCourse(c);

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { LogIn, UserPlus2 } from 'lucide-react';
-import { useAuth } from '../context/AuthProvider';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();

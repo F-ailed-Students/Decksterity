@@ -1,6 +1,6 @@
 import { Bell, BookOpen, Clock, CheckCircle, Sun, Moon } from 'lucide-react';
 import { fetchStats } from '../store';
-import { useTheme } from '../context/ThemeProvider';
+import { useTheme } from '../context/ThemeContext';
 import { useState, useEffect } from 'react';
 
 export default function Sidebar() {

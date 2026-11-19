@@ -1,9 +1,9 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import FlashCard from '../components/FlashCard';
-import { getCourse, getDueCards, getNewCards, rateCard } from '../store';
+import { fetchCards, fetchCourses, getCourse, getDueCards, getNewCards, rateCard } from '../store';
 import { ArrowLeft, CheckCircle, Sun, Moon } from 'lucide-react';
-import { useTheme } from '../context/ThemeProvider';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Study() {
   const { id } = useParams();
@@ -20,29 +20,47 @@ export default function Study() {
   const [againCount, setAgainCount] = useState(0);
 
   useEffect(() => {
-    const c = getCourse(id);
-    if (!c) { navigate('/'); return; }
-    setCourse(c);
+    let active = true;
 
-    // Build queue: due cards first, then new cards, shuffled
-    const due = getDueCards(id);
-    const newC = getNewCards(id).slice(0, Math.max(0, limit - due.length));
-    const all = [...due, ...newC];
-    // Fisher-Yates shuffle
-    for (let i = all.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [all[i], all[j]] = [all[j], all[i]];
+    async function loadSession() {
+      try {
+        await fetchCourses();
+        await fetchCards(id);
+        if (!active) return;
+
+        const c = getCourse(id);
+        if (!c) {
+          navigate('/');
+          return;
+        }
+
+        const due = getDueCards(id);
+        const newC = getNewCards(id).slice(0, Math.max(0, limit - due.length));
+        const all = [...due, ...newC];
+        for (let i = all.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [all[i], all[j]] = [all[j], all[i]];
+        }
+
+        setCourse(c);
+        setQueue(all.slice(0, limit));
+        setIndex(0);
+      } catch (err) {
+        if (active) {
+          console.error(err);
+          navigate('/');
+        }
+      }
     }
-    setQueue(all.slice(0, limit));
-    setIndex(0);
+
+    loadSession();
+    return () => { active = false; };
   }, [id, navigate, limit]);
 
-  const handleRate = useCallback((rating, userAnswer) => {
+  function handleRate(rating) {
     const card = queue[index];
-    console.log(course)
-    console.log(course.id)
-    console.log(card.id)
-    console.log(rating)
+    if (!course || !card) return;
+
     rateCard(course.id, card.id, rating);
     setStudied((s) => s + 1);
     if (rating === 0) setAgainCount((a) => a + 1);
@@ -53,7 +71,7 @@ export default function Study() {
     } else {
       setIndex(next);
     }
-  }, [queue, index]);
+  }
 
   if (!course) return null;
 

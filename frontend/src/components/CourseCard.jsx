@@ -1,4 +1,4 @@
-import { getCourseStatistics, getDueCards, getNewCards } from '../store';
+import { getCourseStatistics } from '../store';
 import { useState, useEffect } from 'react';
 import { Layers } from 'lucide-react';
 
@@ -12,7 +12,7 @@ export default function CourseCard({ course, onDetails, onStudy }) {
         setDue(data.due);
         setNewCount(data.new);
       })
-  }, [course.id]);
+  }, [course]);
 
   return (
     <div className="course-card" style={{ '--accent': course.color }} onClick={() => onDetails(course.id)}>

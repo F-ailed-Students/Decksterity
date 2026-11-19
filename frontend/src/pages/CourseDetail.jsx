@@ -12,15 +12,13 @@ export default function CourseDetail() {
   const [limit, setLimit] = useState(20);
   const [stats, setStats] = useState({ due: 0, new: 0, total: 0 });
 
-  // Loading the cards states
-  const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchCourses()
     .then(() => fetchCards(id))
-      .then((data) => {
+      .then(() => {
         const c = getCourse(id)
         setCourse(c);
         setStats({
