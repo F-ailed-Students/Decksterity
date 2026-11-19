@@ -1,10 +1,10 @@
 import { seedCourses, seedCards } from './seed';
 import api from './api';
 import { dev_makeid } from './utils/utils'
+import { applyRating, countCards, isDueCard, isNewCard, toApiRating } from './logic/scheduling'
 
 const COURSES_KEY = 'sr_courses';
 const CARDS_KEY = 'sr_cards';
-const MS_PER_DAY = 86400000;
 const IS_DEV = import.meta.env.DEV
 
 function load(key, fallback) {
@@ -32,8 +32,8 @@ export async function fetchCourses() {
   if (IS_DEV)
   {
     coursesCache = load(COURSES_KEY, seedCourses)
-    for (var c in coursesCache){
-      await fetchCards(c.id)
+    for (const course of coursesCache) {
+      await fetchCards(course.id)
     }
     return coursesCache;
   }
@@ -44,14 +44,15 @@ export async function fetchCourses() {
   fetchPromise = api.get('/decks')
     .then((res) => {
       coursesCache = res.data; // already parsed, no .json() needed
-      fetchPromise = null;
       return res.data;
     })
     .catch((err) => {
-      fetchPromise = null; // allow retry on next call
       const status = err.response?.status;      // e.g. 404, 500
       const message = err.response?.data?.detail // FastAPI error detail
       throw new Error(`Failed to load decks: ${status} ${message}`);
+    })
+    .finally(() => {
+      fetchPromise = null; // allow retry on next call
     });
 
   return fetchPromise;
@@ -64,7 +65,7 @@ export function invalidateCoursesCache() {
 
 // Fetch cards
 let cardCache = {};
-let cardFetchPromise = null;
+const cardFetchPromises = new Map();
 
 export async function fetchCards(courseId) {
   if (IS_DEV)
@@ -74,23 +75,25 @@ export async function fetchCards(courseId) {
     return cardCache[courseId];
   }
 
-  // Deduplicate in-flight requests (e.g. two components mounting at once)
-  if (cardFetchPromise) return cardFetchPromise;
+  // Deduplicate in-flight requests per course.
+  if (cardFetchPromises.has(courseId)) return cardFetchPromises.get(courseId);
 
-  cardFetchPromise = api.get(`/decks/${courseId}/cards`)
+  const request = api.get(`/decks/${courseId}/cards`)
     .then((res) => {
       cardCache[courseId] = res.data;
-      cardFetchPromise = null;
       return cardCache[courseId];
     })
     .catch((err) => {
-      cardFetchPromise = null; // allow retry on next call
       const status = err.response?.status;      // e.g. 404, 500
       const message = err.response?.data?.detail // FastAPI error detail
       throw new Error(`Failed to load: ${status} ${message}`);
+    })
+    .finally(() => {
+      cardFetchPromises.delete(courseId); // allow retry on next call
     });
 
-  return cardFetchPromise;
+  cardFetchPromises.set(courseId, request);
+  return request;
 }
 
 
@@ -101,25 +104,22 @@ export function getCourses() {
 }
 
 export function getCourse(id) {
-  console.log("LOADME:", id);
-  console.log("THING:", getCourses());
-  return getCourses().find((c) => c.id === id);
+  return getCourses()?.find((c) => c.id === id);
 }
 
 // ── Cards ────────────────────────────────────────────────────────────────────
 
 export function getCardsByCourse(courseId) {
-  return cardCache[courseId];
+  return cardCache[courseId] ?? [];
 }
 
 export function getDueCards(courseId) {
   const now = Date.now();
-  console.log("THE CARDs:", getCardsByCourse(courseId))
-  return getCardsByCourse(courseId).filter((c) => c.due <= now);
+  return getCardsByCourse(courseId).filter((card) => isDueCard(card, now));
 }
 
 export function getNewCards(courseId) {
-  return getCardsByCourse(courseId).filter((c) => c.new);
+  return getCardsByCourse(courseId).filter(isNewCard);
 }
 
 export function addCard(courseId, front, back) {
@@ -154,10 +154,11 @@ export function addCard(courseId, front, back) {
 export function rateCard(courseId, cardId, rating) {
   if (IS_DEV) dev_rateCard(cardId, rating)
   else {
+    // The UI rates 0-3; the API expects 1-4.
     api.post(`review`, {
       deck_id: courseId,
       card_id: cardId,
-      rating: rating
+      rating: toApiRating(rating)
     })
   }
 }
@@ -171,30 +172,7 @@ function dev_rateCard(cardId, rating) {
   const idx = cards.findIndex((c) => c.id === cardId);
   if (idx === -1) return;
 
-  const card = { ...cards[idx] };
-
-  // Adjust ease factor
-  const easeDelta = [-0.3, -0.15, +0.0, +0.15][rating];
-  card.ease = Math.max(1.3, card.ease + easeDelta);
-
-  // Adjust interval
-  if (rating === 0) {
-    // Again: reset to 1 day
-    card.interval = 1;
-    card.new = false;
-  } else {
-    const baseInterval = [1, 2, 4, 7][rating] * card.interval;
-    card.interval = Math.max(1, Math.min(365, Math.round(baseInterval * (card.ease / 2.5))));
-    if (card.new) {
-      card.new = false;
-      card.interval = [1, 2, 4, 7][rating];
-    }
-  }
-
-  card.due = Date.now() + card.interval * MS_PER_DAY;
-  card.lastReviewed = Date.now();
-
-  cards[idx] = card;
+  cards[idx] = applyRating(cards[idx], rating);
   save(CARDS_KEY, cards);
 }
 
@@ -209,35 +187,28 @@ export function resetData() {
 
 export async function getCourseStatistics(course) {
   if (IS_DEV) {
-    console.log("The course obj: ", course)
-    console.log("Its id: ", course.id)
-    fetchCards(course.id)
-    const now = Date.now();
-    return { 
-      "due": getCardsByCourse(course.id).filter((c) => c.due <= now).length,
-      "new": getCardsByCourse(course.id).filter((c) => c.new).length,
-      "reviewedToday": 0
-    };
+    await fetchCards(course.id)
+    return countCards(getCardsByCourse(course.id))
   }
-  return api.get(`/decks/${course.id}/stats`)
+
+  const res = await api.get(`/decks/${course.id}/stats`)
+  return res.data
 }
 
 export async function fetchStats() {
   if (IS_DEV)
   {
-    var all_stat = {"due": 0, "new": 0, "reviewedToday": 0}
-    console.log("All courses:", getCourses())
-    for (var c of getCourses())
+    const allStat = { due: 0, new: 0, reviewedToday: 0 }
+    for (const course of getCourses() ?? [])
     {
-      console.log(c)
-      var stat = await getCourseStatistics(c)
-      for (var k in all_stat)
+      const stat = await getCourseStatistics(course)
+      for (const key in allStat)
       {
-        all_stat[k] += stat[k]
+        allStat[key] += stat[key] ?? 0
       }
     }
       
-    return all_stat
+    return allStat
   }
 
   try {

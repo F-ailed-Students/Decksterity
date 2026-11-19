@@ -50,6 +50,18 @@ describe('dev store', () => {
     expect(store.getNewCards('anatomy')).toHaveLength(4)
   })
 
+  it('reads the legacy dueDate field for due cards', async () => {
+    await store.fetchCards('anatomy')
+
+    expect(store.getDueCards('anatomy')).toHaveLength(2)
+  })
+
+  it('builds dev statistics from the course cards', async () => {
+    const stats = await store.getCourseStatistics({ id: 'anatomy' })
+
+    expect(stats).toEqual({ due: 2, new: 4, reviewedToday: 0 })
+  })
+
   it('writes new cards to localStorage', async () => {
     await store.fetchCards('anatomy')
 
@@ -66,6 +78,10 @@ describe('dev store', () => {
       new: true,
     })
     expect(typeof added.due).toBe('number')
+
+    await store.fetchCards('anatomy')
+    expect(store.getNewCards('anatomy')).toHaveLength(5)
+    expect(store.getDueCards('anatomy')).toHaveLength(2)
   })
 
   it('rates a card and persists the new schedule', async () => {
@@ -82,13 +98,21 @@ describe('dev store', () => {
     expect(rated.due).toBeGreaterThan(Date.now())
   })
 
+  it('counts reviewed cards in dev statistics', async () => {
+    await store.fetchCards('anatomy')
+    store.rateCard('anatomy', 'a1', 2)
+
+    const stats = await store.getCourseStatistics({ id: 'anatomy' })
+
+    expect(stats).toEqual({ due: 2, new: 3, reviewedToday: 1 })
+  })
+
   it('reports aggregate dev statistics', async () => {
     await store.fetchCourses()
 
     const stats = await store.fetchStats()
 
-    expect(stats.new).toBe(11)
-    expect(stats.reviewedToday).toBe(0)
+    expect(stats).toEqual({ due: 6, new: 11, reviewedToday: 0 })
   })
 
   it('resets localStorage to the seed data', async () => {

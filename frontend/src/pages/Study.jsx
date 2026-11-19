@@ -1,7 +1,8 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import FlashCard from '../components/FlashCard';
-import { fetchCards, fetchCourses, getCourse, getDueCards, getNewCards, rateCard } from '../store';
+import { fetchCards, fetchCourses, getCardsByCourse, getCourse, rateCard } from '../store';
+import { buildStudyQueue } from '../logic/scheduling';
 import { ArrowLeft, CheckCircle, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -34,17 +35,13 @@ export default function Study() {
           return;
         }
 
-        const due = getDueCards(id);
-        const newC = getNewCards(id).slice(0, Math.max(0, limit - due.length));
-        const all = [...due, ...newC];
-        for (let i = all.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [all[i], all[j]] = [all[j], all[i]];
-        }
-
+        const all = buildStudyQueue(getCardsByCourse(id), limit);
         setCourse(c);
-        setQueue(all.slice(0, limit));
+        setQueue(all);
         setIndex(0);
+        setStudied(0);
+        setAgainCount(0);
+        setDone(all.length === 0);
       } catch (err) {
         if (active) {
           console.error(err);
@@ -134,7 +131,7 @@ export default function Study() {
         <div className="progress-bar">
           <div
             className="progress-fill"
-            style={{ width: `${((index) / queue.length) * 100}%` }}
+            style={{ width: `${((index + 1) / queue.length) * 100}%` }}
           />
         </div>
 
