@@ -43,4 +43,18 @@ describe('Dashboard', () => {
     expect(screen.getByText('Your Courses')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Clear all memory' })).toBeInTheDocument()
   })
+
+  it('shows a load error', async () => {
+    fetchCourses.mockRejectedValue(new Error('offline'))
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter>
+          <Dashboard />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(await screen.findByText(/offline/)).toBeInTheDocument()
+  })
 })

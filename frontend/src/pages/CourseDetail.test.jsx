@@ -67,4 +67,20 @@ describe('CourseDetail', () => {
 
     expect(screen.getByText('Study session')).toBeInTheDocument()
   })
+
+  it('shows an error when the course does not exist', async () => {
+    getCourse.mockReturnValue(null)
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/courses/missing']}>
+          <Routes>
+            <Route path="/courses/:id" element={<CourseDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(await screen.findByText(/Course not found/)).toBeInTheDocument()
+  })
 })

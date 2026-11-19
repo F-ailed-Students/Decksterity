@@ -52,4 +52,45 @@ describe('Editor', () => {
     expect(screen.getByPlaceholderText('Question')).toHaveValue('')
     expect(screen.getByPlaceholderText('Answer')).toHaveValue('')
   })
+
+  it('requires both sides of the card', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/courses/anatomy/edit']}>
+          <Routes>
+            <Route path="/courses/:id/edit" element={<Editor />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    await screen.findByText('Human Anatomy')
+    const save = screen.getByRole('button', { name: 'Save' })
+
+    expect(save).toBeDisabled()
+
+    await user.type(screen.getByPlaceholderText('Question'), 'What is 2 + 2?')
+    expect(save).toBeDisabled()
+
+    await user.type(screen.getByPlaceholderText('Answer'), '4')
+    expect(save).toBeEnabled()
+  })
+
+  it('shows an error when the course does not exist', async () => {
+    getCourse.mockReturnValue(null)
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/courses/missing/edit']}>
+          <Routes>
+            <Route path="/courses/:id/edit" element={<Editor />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(await screen.findByText(/Course not found/)).toBeInTheDocument()
+  })
 })

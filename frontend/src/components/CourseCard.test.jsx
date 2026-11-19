@@ -59,4 +59,12 @@ describe('CourseCard', () => {
     expect(await screen.findByText('All caught up!')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Study now' })).toBeDisabled()
   })
+
+  it('falls back to caught up when statistics fail', async () => {
+    getCourseStatistics.mockRejectedValue(new Error('offline'))
+
+    render(<CourseCard course={course} onDetails={vi.fn()} onStudy={vi.fn()} />)
+
+    expect(await screen.findByText('All caught up!')).toBeInTheDocument()
+  })
 })

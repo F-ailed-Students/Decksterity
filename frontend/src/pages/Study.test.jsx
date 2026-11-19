@@ -72,4 +72,23 @@ describe('Study', () => {
     expect(await screen.findByText('Session complete!')).toBeInTheDocument()
     expect(screen.getByText('1', { selector: '.done-stat-value' })).toBeInTheDocument()
   })
+
+  it('shows the completion screen when there is nothing to study', async () => {
+    getCardsByCourse.mockReturnValue([])
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/study/anatomy']}>
+          <Routes>
+            <Route path="/study/:id" element={<Study />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(await screen.findByText('Session complete!')).toBeInTheDocument()
+    expect(document.querySelector('.done-subtitle')).toHaveTextContent(
+      'You studied 0 cards from Human Anatomy',
+    )
+  })
 })

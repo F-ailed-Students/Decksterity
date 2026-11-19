@@ -60,10 +60,20 @@ describe('prod store', () => {
     })
   })
 
+  it('posts new cards to the course endpoint', () => {
+    store.addCard('anatomy', 'Question', 'Answer')
+
+    expect(api.post).toHaveBeenCalledWith('/decks/anatomy/cards/add', {
+      front: 'Question',
+      back: 'Answer',
+      is_public: false,
+    })
+  })
+
   it('sends reviews on the API rating scale', () => {
     store.rateCard('anatomy', 7, 2)
 
-    expect(api.post).toHaveBeenCalledWith('review', {
+    expect(api.post).toHaveBeenCalledWith('/review', {
       deck_id: 'anatomy',
       card_id: 7,
       rating: 3,

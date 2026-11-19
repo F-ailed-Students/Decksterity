@@ -18,22 +18,24 @@ function load(key, fallback) {
   }
 }
 
-function save(key, val) {
-  localStorage.setItem(key, JSON.stringify(val));
+function save(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
-// ── Async loadsave ──────────────────────────────────────────────────────────────────
+function apiError(prefix, error) {
+  const status = error.response?.status ?? 'unknown';
+  const message = error.response?.data?.detail ?? error.message;
+  return new Error(`${prefix}: ${status} ${message}`);
+}
 
-// In-memory cache
 let coursesCache = null;
 let fetchPromise = null;
 
 export async function fetchCourses() {
-  if (IS_DEV)
-  {
-    coursesCache = load(COURSES_KEY, seedCourses)
+  if (IS_DEV) {
+    coursesCache = load(COURSES_KEY, seedCourses);
     for (const course of coursesCache) {
-      await fetchCards(course.id)
+      await fetchCards(course.id);
     }
     return coursesCache;
   }
@@ -43,16 +45,14 @@ export async function fetchCourses() {
 
   fetchPromise = api.get('/decks')
     .then((res) => {
-      coursesCache = res.data; // already parsed, no .json() needed
+      coursesCache = res.data;
       return res.data;
     })
-    .catch((err) => {
-      const status = err.response?.status;      // e.g. 404, 500
-      const message = err.response?.data?.detail // FastAPI error detail
-      throw new Error(`Failed to load decks: ${status} ${message}`);
+    .catch((error) => {
+      throw apiError('Failed to load decks', error);
     })
     .finally(() => {
-      fetchPromise = null; // allow retry on next call
+      fetchPromise = null;
     });
 
   return fetchPromise;
@@ -63,15 +63,13 @@ export function invalidateCoursesCache() {
   coursesCache = null;
 }
 
-// Fetch cards
 let cardCache = {};
 const cardFetchPromises = new Map();
 
 export async function fetchCards(courseId) {
-  if (IS_DEV)
-  {
-    cardCache[courseId] 
-      = load(CARDS_KEY, seedCards).filter((c) => c.courseId === courseId)
+  if (IS_DEV) {
+    cardCache[courseId] = load(CARDS_KEY, seedCards)
+      .filter((card) => card.courseId === courseId);
     return cardCache[courseId];
   }
 
@@ -83,31 +81,24 @@ export async function fetchCards(courseId) {
       cardCache[courseId] = res.data;
       return cardCache[courseId];
     })
-    .catch((err) => {
-      const status = err.response?.status;      // e.g. 404, 500
-      const message = err.response?.data?.detail // FastAPI error detail
-      throw new Error(`Failed to load: ${status} ${message}`);
+    .catch((error) => {
+      throw apiError('Failed to load', error);
     })
     .finally(() => {
-      cardFetchPromises.delete(courseId); // allow retry on next call
+      cardFetchPromises.delete(courseId);
     });
 
   cardFetchPromises.set(courseId, request);
   return request;
 }
 
-
-// ── Courses ──────────────────────────────────────────────────────────────────
-
 export function getCourses() {
   return coursesCache;
 }
 
 export function getCourse(id) {
-  return getCourses()?.find((c) => c.id === id);
+  return getCourses()?.find((course) => course.id === id);
 }
-
-// ── Cards ────────────────────────────────────────────────────────────────────
 
 export function getCardsByCourse(courseId) {
   return cardCache[courseId] ?? [];
@@ -124,43 +115,41 @@ export function getNewCards(courseId) {
 
 export function addCard(courseId, front, back) {
   if (IS_DEV) {
-    const c = dev_getCards();
-    c.push({
+    const cards = dev_getCards();
+    cards.push({
       id: dev_makeid(10),
-      courseId: courseId,
-      front: front,
-      back: back,
+      courseId,
+      front,
+      back,
       interval: 1,
       ease: 2.5,
       due: Date.now(),
       lastReviewed: null,
       new: true,
     });
-    save(CARDS_KEY, c);
+    save(CARDS_KEY, cards);
+    return;
   }
-  else {
-    api.post(`decks/${courseId}/cards/add`, {
-      front: front,
-      back: back,
-      is_public: false
-    })
-  }
+
+  return api.post(`/decks/${courseId}/cards/add`, {
+    front,
+    back,
+    is_public: false,
+  });
 }
 
-
-// ── SM-2 Simplified ─────────────────────────────────────────────────────────
-// rating: 0 = Again, 1 = Hard, 2 = Good, 3 = Easy
-
 export function rateCard(courseId, cardId, rating) {
-  if (IS_DEV) dev_rateCard(cardId, rating)
-  else {
-    // The UI rates 0-3; the API expects 1-4.
-    api.post(`review`, {
-      deck_id: courseId,
-      card_id: cardId,
-      rating: toApiRating(rating)
-    })
+  if (IS_DEV) {
+    dev_rateCard(cardId, rating);
+    return;
   }
+
+  // The UI rates 0-3; the API expects 1-4.
+  return api.post('/review', {
+    deck_id: courseId,
+    card_id: cardId,
+    rating: toApiRating(rating),
+  });
 }
 
 function dev_getCards() {
@@ -169,54 +158,44 @@ function dev_getCards() {
 
 function dev_rateCard(cardId, rating) {
   const cards = dev_getCards();
-  const idx = cards.findIndex((c) => c.id === cardId);
-  if (idx === -1) return;
+  const index = cards.findIndex((card) => card.id === cardId);
+  if (index === -1) return;
 
-  cards[idx] = applyRating(cards[idx], rating);
+  cards[index] = applyRating(cards[index], rating);
   save(CARDS_KEY, cards);
 }
-
-// ── Seed / Reset ─────────────────────────────────────────────────────────────
 
 export function resetData() {
   save(COURSES_KEY, seedCourses);
   save(CARDS_KEY, seedCards);
 }
 
-// ── Stats ────────────────────────────────────────────────────────────────────
-
 export async function getCourseStatistics(course) {
   if (IS_DEV) {
-    await fetchCards(course.id)
-    return countCards(getCardsByCourse(course.id))
+    await fetchCards(course.id);
+    return countCards(getCardsByCourse(course.id));
   }
 
-  const res = await api.get(`/decks/${course.id}/stats`)
-  return res.data
+  const res = await api.get(`/decks/${course.id}/stats`);
+  return res.data;
 }
 
 export async function fetchStats() {
-  if (IS_DEV)
-  {
-    const allStat = { due: 0, new: 0, reviewedToday: 0 }
-    for (const course of getCourses() ?? [])
-    {
-      const stat = await getCourseStatistics(course)
-      for (const key in allStat)
-      {
-        allStat[key] += stat[key] ?? 0
-      }
-    }
-      
-    return allStat
+  if (IS_DEV) {
+    const courses = getCourses() ?? [];
+    const statistics = await Promise.all(courses.map(getCourseStatistics));
+
+    return statistics.reduce((totals, stats) => ({
+      due: totals.due + (stats.due ?? 0),
+      new: totals.new + (stats.new ?? 0),
+      reviewedToday: totals.reviewedToday + (stats.reviewedToday ?? 0),
+    }), { due: 0, new: 0, reviewedToday: 0 });
   }
 
   try {
-    const res = await api.get(`/stats`);
+    const res = await api.get('/stats');
     return res.data;
-  } catch (err) {
-    const status = err.response?.status; // e.g. 404, 500
-    const message = err.response?.data?.detail; // FastAPI error detail
-    throw new Error(`Failed to get stats: ${status} ${message}`);
+  } catch (error) {
+    throw apiError('Failed to get stats', error);
   }
 }

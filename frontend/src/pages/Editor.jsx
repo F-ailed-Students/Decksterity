@@ -83,6 +83,7 @@ export default function Editor() {
 
         <button
           className="btn-primary"
+          disabled={!newQuestion.trim() || !newAnswer.trim()}
           onClick={() => {
             addCard(course.id, newQuestion, newAnswer);
             setNewQuestion('');
