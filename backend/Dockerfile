@@ -7,4 +7,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "app/main.py"]
+WORKDIR /app/app
+CMD ["uvicorn", "main:master_app", "--host", "0.0.0.0", "--port", "8000"]

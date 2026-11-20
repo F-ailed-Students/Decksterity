@@ -22,6 +22,7 @@ ph = PasswordHasher()
 # --- 2. DYNAMIC DATABASE POOL SETUP ---
 connection_pools = {}
 ALLOWED_DATABASES = ["mydb"]
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_pool_for_db(db_name: str):
     """Retrieves an existing pool for a database, or creates one if it doesn't exist."""
@@ -30,14 +31,19 @@ def get_pool_for_db(db_name: str):
 
     if db_name not in connection_pools:
         try:
-            connection_pools[db_name] = psycopg2.pool.SimpleConnectionPool(
-                1, 20,
-                user="user",
-                password="password", 
-                host="localhost",
-                port="5432",
-                database=db_name
-            )
+            if DATABASE_URL:
+                connection_pools[db_name] = psycopg2.pool.SimpleConnectionPool(
+                    1, 20, dsn=DATABASE_URL
+                )
+            else:
+                connection_pools[db_name] = psycopg2.pool.SimpleConnectionPool(
+                    1, 20,
+                    user="user",
+                    password="password",
+                    host="localhost",
+                    port="5432",
+                    database=db_name
+                )
             print(f"Created new connection pool for: {db_name}")
         except Exception as e:
             print(f"Failed to connect to {db_name}: {e}")
