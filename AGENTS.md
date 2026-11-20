@@ -29,11 +29,12 @@ Backend (`backend/app/`):
 - `$env:DECKSTERITY_SECRET_KEY='dev-only'; python main.py` — serves `:8000` with reload
 - Import check: `$env:DECKSTERITY_SECRET_KEY='dev-only'; python -c "import main"`
 - If `python` resolves to the Windows Store alias, use `py` instead of `python`.
-- `db.py` needs Postgres on `localhost:5432`, database `mydb`, user/password `user`/`password` (hardcoded); see status before relying on `/db`.
+- `db.py` uses `DATABASE_URL` when set; otherwise falls back to Postgres on `localhost:5432`, database `mydb`, user/password `user`/`password`. `/db` still has no schema/migrations.
 
 Full stack:
 
-- `podman compose up --build --force-recreate --detach` — currently broken (see status)
+- `.\run.ps1` — local dev: Vite `:5173` + API `:8000`; flags `-Tests`, `-NoBackend`, `-Open`
+- `podman compose up --build --force-recreate --detach` — Podman deployment stack; verified 2026-11-20
 - Ports: frontend `:3000`, API `:8000`, Postgres `:5432`
 
 There is a frontend Vitest suite, no backend tests, and no migration tool. Do not claim runtime behavior is verified based on lint/build/unit tests alone.
@@ -45,7 +46,7 @@ backend/app/main.py      master FastAPI app; mounts /api and /db
 backend/app/model.py     /api: in-memory decks + FSRS review engine, no auth, no DB
 backend/app/db.py        /db: Postgres accounts/cards, JWT + Argon2, role hierarchy
 frontend/src/store.js    data layer: dev localStorage path vs prod Axios path
-frontend/src/api.js      Axios baseURL http://localhost:8000/api + bearer interceptor
+frontend/src/api.js      Axios baseURL (dev localhost:8000, prod /api) + bearer interceptor
 frontend/src/logic/      pure scheduling/counting/rating helpers + tests
 frontend/src/hooks/      useStudySession
 frontend/src/pages/      Login, Dashboard, CourseDetail, Study, Editor, Error404
@@ -54,8 +55,9 @@ frontend/src/test/       Vitest setup (jest-dom + cleanup)
 frontend/vitest.config.js jsdom test config
 frontend/src/seed.js     demo courses/cards for dev
 frontend/src/index.css   real styling (927 lines); App.css is unused
-frontend/nginx.conf      SPA fallback + /api proxy (service-name bug)
+frontend/nginx.conf      SPA fallback + /api proxy to card_backend
 podman-compose.yml       card_db, card_backend, card_frontend
+run.ps1                  local Vite + API runner; -Tests, -NoBackend, -Open
 docs/                    architecture, API, status, Canvas LTI research
 ```
 
@@ -89,13 +91,12 @@ Permission rules are not enforced per command under T3 (its session overrides `o
 
 ## Known landmines (details in docs/status.md)
 
-1. Infra names disagree: compose has `card_db`/`card_backend`, but `depends_on`/`DATABASE_URL` use `db` (`podman-compose.yml:19-23`); nginx proxies to `backend` (`nginx.conf:13-14`); `db.py:33-40` uses `localhost`.
+1. `/db` has no schema/migrations; `accounts` and `cards` tables are absent, so DB-backed endpoints fail. `setup_global_admin` is unauthenticated (`db.py:293-302`).
 2. `/api` has no auth and accepts a client-supplied `created_by` (`model.py:198-203`). `/db` issues JWTs with no `exp` (`db.py:192-198`).
 3. README/Specification claim `/register`, `/auto-login`, `/courses`, `PUT /cards/{id}` — they do not exist. `docs/api.md` is authoritative.
 4. Prod `/api` has no `new` flag and only a `default` deck, so new-card counts and multi-course UX are dev-only (`model.py:221`, `store.js`).
 5. Frontend fixes are unit/component-tested but not browser-verified: dev persistence, direct `/study/:id`, add-card saving, and prod review/stats calls.
 6. Auth is still a localStorage mock (`AuthProvider.jsx`); `AccountMenu` reflects it, but no real token/login exists.
-7. `db.py` has no schema/migrations; `accounts` and `cards` tables are assumed. `setup_global_admin` is unauthenticated (`db.py:293-302`).
 
 ## Definition of done
 

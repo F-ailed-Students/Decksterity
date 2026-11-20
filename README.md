@@ -70,6 +70,21 @@ This application combines a modern React frontend with a FastAPI backend to prov
 - Podman (or Docker)
 - Podman Compose
 
+### Local Development (Windows)
+
+Install frontend dependencies once, then run the local Vite server and FastAPI API:
+
+```powershell
+cd frontend
+npm install
+cd ..
+.\run.ps1
+```
+
+`run.ps1` starts the frontend on `http://localhost:5173` and the API on `http://localhost:8000`. Use `-NoBackend` for the localStorage-only frontend, `-Tests` to run frontend tests/lint/build plus the backend import check, or `-Open` to launch the browser.
+
+Postgres is not required for local UI work; the dev frontend uses `localStorage` and the in-memory `/api` app. For the full container stack, use Podman below.
+
 ### Quick Start
 
 1. Clone the repository:
@@ -106,8 +121,8 @@ podman-compose -f podman-compose.yml build
 
 Run specific service:
 ```bash
-podman-compose -f podman-compose.yml up backend
-podman-compose -f podman-compose.yml up frontend
+podman-compose -f podman-compose.yml up card_backend
+podman-compose -f podman-compose.yml up card_frontend
 ```
 
 ### Development with Podman
@@ -119,7 +134,7 @@ podman-compose -f podman-compose.yml logs -f
 
 For a specific service:
 ```bash
-podman-compose -f podman-compose.yml logs -f backend
+podman-compose -f podman-compose.yml logs -f card_backend
 ```
 
 ## Container Services

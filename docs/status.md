@@ -1,21 +1,23 @@
 # Status
 
-**Snapshot:** 2026-11-19 · branch `main` @ `c391365` · 61 Vitest tests; uncommitted test/UI/store refinements; runtime paths not exercised.
+**Snapshot:** 2026-11-20 · branch `main` @ `805cd7e` · 61 Vitest tests; Podman stack verified; `/db` schema still absent; browser paths not exercised.
 Update this file whenever work lands. Add a dated line under “Log”, and do not remove unresolved items without exercising the real path.
 
 ## Verified this snapshot
 
 | Check | Command | Result |
 | --- | --- | --- |
-| Frontend build | `npm run build` (in `frontend/`) | **Passes** — 553.99 kB JS (173.33 kB gzip), chunk-size warning |
+| Frontend build | `npm run build` (in `frontend/`) | **Passes** — 553.97 kB JS (173.32 kB gzip), chunk-size warning |
 | Frontend lint | `npm run lint` (in `frontend/`) | **Passes** — 0 errors, 0 warnings |
 | Frontend tests | `npm test` (in `frontend/`) | **Passes** — 17 files, 61 tests |
 | Backend import | `$env:DECKSTERITY_SECRET_KEY='dev-only'; py -c "import main"` (in `backend/app/`) | **Passes** |
-| Backend runtime / `/db` | curl or TestClient | **Not run** — no Postgres verified here |
-| Compose stack | `podman compose up ...` | **Not run** — known broken |
+| Backend runtime / `/db` | curl or TestClient | **Partial** — API up; `/db/login` 500 because tables do not exist |
+| Compose stack | `podman compose up --build --force-recreate --detach` | **Passes** — all three containers up; `:3000/api/decks` 200 |
+| DB connection | `podman exec card_backend python -c ...` | **Passes** — `DATABASE_URL` reaches Postgres |
+| Local runner | `.\run.ps1 -Tests` | **Passes** — 61 tests, lint, build, backend import |
 | LTI | — | **Not implemented**; research only |
 
-Build, lint, and Vitest pass. Dev persistence, `addCard`, direct `/study/:id`, and production API mapping are covered by unit/component tests, but the real browser/API paths are not exercised; they remain build/test-verified only until runtime testing lands.
+Build, lint, Vitest, the local runner, and the Podman stack pass. Dev persistence, `addCard`, direct `/study/:id`, and production API mapping are covered by unit/component tests, but the real browser paths are not exercised. `/db` connects to Postgres but remains unusable without a schema.
 
 ## What exists
 
@@ -23,24 +25,22 @@ Build, lint, and Vitest pass. Dev persistence, `addCard`, direct `/study/:id`, a
 - `/api` prototype: in-memory decks, FSRS reviews, statistics. Works until restart; no auth.
 - `/db` code: Postgres accounts/cards, Argon2, JWT, role hierarchy. Not wired to the UI and not schema-managed.
 - Dev seed data for three medical courses.
-- Container definitions for frontend/backend/Postgres, currently miswired.
+- Podman stack for frontend/backend/Postgres; compose, nginx, and same-origin API paths now run.
 
 No real authentication, no course membership, no UI persistence, no backend tests, no migrations, no LTI. Frontend Vitest tests and shared UI/hooks now exist.
 
 ## Known issues
 
-Severity: P0 = blocks running/security-critical, P1 = core feature broken, P2 = correctness/robustness, P3 = cleanliness.
+Severity: P0 = blocks running/security-critical, P1 = core feature broken, P2 = correctness/robustness, P3 = cleanliness. Issue numbers are stable IDs; resolved entries are removed.
 
 ### P0 — broken or dangerous
 
 | # | Issue | Evidence |
 | --- | --- | --- |
-| 1 | Compose cannot start: `depends_on` and `DATABASE_URL` reference `db`, but the service is `card_db` | `podman-compose.yml:19-23` |
-| 2 | nginx proxies `/api/` to `http://backend:8000/`, but the service is `card_backend`; also strips `/api` via trailing slash | `frontend/nginx.conf:12-19` |
-| 3 | `POST /db/users/admin/setup` is unauthenticated and creates a `GlobalAdmin` | `db.py:293-302` |
-| 4 | `/api` has no authentication; anyone can create/review cards, and `created_by` is spoofable | `model.py:198-203`, `model.py:239-252` |
-| 5 | `/db` JWTs have no `exp`, so they never expire and cannot be revoked | `db.py:192-198` |
-| 6 | DB credentials are hardcoded and `DATABASE_URL` is ignored | `db.py:33-40` |
+| 1 | `POST /db/users/admin/setup` is unauthenticated and creates a `GlobalAdmin` | `db.py:293-302` |
+| 2 | `/api` has no authentication; anyone can create/review cards, and `created_by` is spoofable | `model.py:198-203`, `model.py:239-252` |
+| 3 | `/db` JWTs have no `exp`, so they never expire and cannot be revoked | `db.py:192-198` |
+| 4 | `/db` fails on a fresh database because there is no schema/migration | `db.py:91-101`, `db.py:208-214` |
 
 ### P1 — core behavior
 
@@ -53,8 +53,7 @@ Severity: P0 = blocks running/security-critical, P1 = core feature broken, P2 = 
 | 11 | Prod stats now unwrap the Axios response; unit-tested with a mocked API, not exercised against a running backend | `store.js:216-229`, `CourseCard.jsx:9-14` |
 | 12 | Prod dashboard shows only the backend `default` deck; seed courses are dev-only and there is no course creation/join UI | `model.py:221`, `store.js:37-64` |
 | 13 | Auth is a localStorage mock; no token is stored and no backend login is called. `AccountMenu` now reflects the mock user but has no account/logout page | `AuthProvider.jsx:41-59`, `AccountMenu.jsx:7-18`, `api.js:7-13` |
-| 14 | No DB schema/migrations; `accounts` and `cards` tables are assumed | `db.py:91-101`, `db.py:208-214` |
-| 15 | Lint and Vitest pass; there is still no CI workflow | `npm run lint`, `npm test` |
+| 14 | Lint, Vitest, and Podman builds pass; there is still no CI workflow | `npm run lint`, `npm test`, `podman compose up` |
 
 ### P2 — correctness/robustness
 
@@ -81,12 +80,12 @@ Severity: P0 = blocks running/security-critical, P1 = core feature broken, P2 = 
 
 ## Active work / ownership
 
-Uncommitted frontend changes exist. Claim areas here before parallel work:
+Frontend and deployment changes are committed. Claim areas here before parallel work:
 
 | Area | Owner | State |
 | --- | --- | --- |
-| Project docs (`AGENTS.md`, `docs/*`) | — | Written; untracked |
-| Infra (compose, nginx, env) | unclaimed | Broken |
+| Project docs (`AGENTS.md`, `docs/*`) | this session | Updated for runner and deployment |
+| Infra (compose, nginx, env) | this session | Podman stack verified; `/db` schema pending |
 | Persistence/auth unification | unclaimed | Not started |
 | Frontend refactor/tests | this session | Shared components/hooks extracted; 61 tests; lint/build pass; runtime untested |
 | Frontend data layer fixes | this session | Unit/component-tested; runtime untested |
@@ -95,7 +94,7 @@ Uncommitted frontend changes exist. Claim areas here before parallel work:
 ## Next steps (recommended order)
 
 1. **Decide the target:** Postgres + `/db` is the intended persistence path. Freeze `/api` as a prototype or adapt it behind the same models; do not maintain two review models.
-2. **Make it run:** fix compose service names/upstreams, make DB config env-driven, add a schema/migration (accounts, courses, cards, reviews, LTI tables). Add a `/health` endpoint.
+2. **Finish persistence:** add a schema/migration (accounts, courses, cards, reviews, LTI tables); `/db/login` still 500s on the empty volume. Add a `/health` endpoint.
 3. **Unify auth:** replace the mock with backend auth or LTI session; add JWT `exp`/refresh or HttpOnly sessions; remove client-supplied identity.
 4. **Repair the data layer:** finish per-course fetch dedupe, rating mapping (choose 0–3 or 1–4 end-to-end), seeded `due`, prod stats unwrapping, and verify the changed dev paths.
 5. **Implement LTI:** follow the phases in `lti-canvas.md`; identity/roles first, then progress persistence, then NRPS, then AGS/deep linking.
@@ -117,3 +116,5 @@ Uncommitted frontend changes exist. Claim areas here before parallel work:
 - **2026-11-19** — Added Vitest/jsdom/Testing Library characterization tests, extracted scheduling logic, fixed dev due/new counts, production stats unwrapping, rating mapping, per-course fetch dedupe, and study-session progress. `npm test` and lint pass.
 - **2026-11-19** — Refactored frontend pages around shared layout/header/stat/rating/summary components and `useStudySession`; fixed loading/error states, duplicate `ThemeProvider`, account label, empty-card save, and card-stat failures. Added tests for error/empty states. 61 tests, lint, and build pass; browser/runtime paths still unverified.
 - **2026-11-19** — Cleaned `store.js`: unified API error handling, normalized API paths, returned prod `addCard`/`rateCard` requests, parallelized dev aggregate stats, and added prod-store tests.
+- **2026-11-20** — Added root `__pycache__` ignore rules, removed the tracked `.pyc`, and added `run.ps1` for local Vite + API. Verified default startup, `-NoBackend`, and `-Tests` (61 tests, lint, build, backend import).
+- **2026-11-20** — Fixed Podman deployment wiring: compose service names/`DATABASE_URL`, nginx upstream and `/api` prefix, same-origin production API calls, env-driven DB config, non-reload container command, `npm ci`, and Docker build ignores. `podman compose up --build --force-recreate --detach` succeeds; `:3000`, `:3000/api/decks`, and Postgres connectivity verified. `/db` needs schema before its endpoints work.

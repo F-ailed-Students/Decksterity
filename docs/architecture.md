@@ -1,6 +1,6 @@
 # Architecture
 
-Snapshot: 2026-11-19, `main` @ `2dd1871`. This describes the code as it exists, then the intended direction. For bugs and current work see `status.md`.
+Snapshot: 2026-11-20, `main` @ `805cd7e`. This describes the code as it exists, then the intended direction. For bugs and current work see `status.md`.
 
 ## System context
 
@@ -16,10 +16,10 @@ Snapshot: 2026-11-19, `main` @ `2dd1871`. This describes the code as it exists, 
                │ prod: same-origin /api (nginx)
 ┌──────────────▼───────────────┐        ┌────────────────────┐
 │ FastAPI master app (:8000)   │        │ Postgres 15        │
-│  /api  → model.py            │        │  localhost:5432    │
+│  /api  → model.py            │        │  card_db:5432      │
 │         in-memory FSRS decks │        │  db: mydb          │
-│  /db   → db.py               │───────▶│  user/password     │
-│         accounts + cards     │        │  (hardcoded)       │
+│  /db   → db.py               │───────▶│  DATABASE_URL      │
+│         accounts + cards     │        │  (local fallback)  │
 └──────────────────────────────┘        └────────────────────┘
 ```
 
@@ -31,16 +31,16 @@ There is no LTI integration yet. `lti-canvas.md` is the design for adding one.
 | --- | --- | --- | --- |
 | Vite dev (`npm run dev`) | Vite dev server, default `:5173` | Optional; only needed for prod-style API calls | Optional |
 | Local backend | `npm run dev` | `python main.py` on `:8000` | Needed for `/db` |
-| Compose (intended) | nginx `:3000` → `:80` | `:8000` | `:5432` |
+| Compose (verified) | nginx `:3000` → `:80` | `:8000` | `:5432` |
 
-Compose is currently broken because service names and `DATABASE_URL` disagree (`status.md`). CORS is `allow_origins=["*"]` in `main.py`, so the SPA can call either prefix.
+The Podman stack builds and runs with `podman compose up --build --force-recreate --detach`; frontend `http://localhost:3000` and `/api` both return 200. CORS remains `allow_origins=["*"]` in `main.py`.
 
 ## Backend
 
 ### `backend/app/main.py`
 
 - Creates `master_app` and mounts two complete FastAPI apps at `/db` and `/api` (`main.py:19-20`). Each sub-app has its own OpenAPI schema, models, and error behavior.
-- Runs with `uvicorn.run("main:master_app", host="0.0.0.0", port=8000, reload=True)` only when executed directly.
+- Runs with `uvicorn.run("main:master_app", host="0.0.0.0", port=8000, reload=True)` only when executed directly; the container uses `uvicorn main:master_app` without reload.
 - Imports `db.py`, which requires `DECKSTERITY_SECRET_KEY` at import time; `model.py` does not.
 
 ### `/api` — `model.py` (prototype)
@@ -56,7 +56,7 @@ Compose is currently broken because service names and `DATABASE_URL` disagree (`
 
 ### `/db` — `db.py` (intended persistence path)
 
-- Postgres via `psycopg2.pool.SimpleConnectionPool`; pool created lazily per database name. Credentials and host are hardcoded (`db.py:33-40`), and `DATABASE_URL` from compose is ignored.
+- Postgres via `psycopg2.pool.SimpleConnectionPool`; pool created lazily per database name. `DATABASE_URL` is used when set (compose points it at `card_db`); local fallback remains hardcoded (`db.py:25,33-48`).
 - Only `mydb` is allowed (`ALLOWED_DATABASES`). Clients choose the DB with `X-Database-Name` (default `mydb`).
 - Auth: email/password login, Argon2 hashing, HS256 JWT with payload `{sub: account_id, role}` and **no expiry** (`db.py:192-198`).
 - Roles: `Student` (1), `Teacher` (2), `GlobalAdmin` (3) (`db.py:145-149`).
@@ -95,7 +95,7 @@ Do not merge these incrementally. Pick `/db` + Postgres as the source of truth, 
 Two completely separate paths selected by `import.meta.env.DEV`:
 
 - Dev: `localStorage` keys `sr_courses`/`sr_cards`, seeded from `seed.js`. A module-level `coursesCache` and `cardCache` mirror data in memory.
-- Prod: Axios calls through `api.js` to `http://localhost:8000/api`; caches are still module-level. `fetchPromise` dedupes the deck request, and a per-course `cardFetchPromises` map dedupes card requests.
+- Prod: Axios calls through `api.js` to same-origin `/api` (nginx proxies to `card_backend`); caches are still module-level. `fetchPromise` dedupes the deck request, and a per-course `cardFetchPromises` map dedupes card requests.
 
 Current effective behavior:
 

@@ -1,8 +1,8 @@
 # API Reference (actual behavior)
 
-Snapshot: 2026-11-19, `main` @ `2dd1871`. Derived from `backend/app/main.py`, `model.py`, and `db.py`. This file is authoritative over `README.md` and `Specification.txt`.
+Snapshot: 2026-11-20, `main` @ `805cd7e`. Derived from `backend/app/main.py`, `model.py`, and `db.py`. This file is authoritative over `README.md` and `Specification.txt`.
 
-Base URL: `http://localhost:8000`. The master app mounts two independent apps:
+Base URL: `http://localhost:8000` in local dev. In the Podman stack, use same-origin `/api` on `http://localhost:3000`; nginx proxies it to `card_backend`. The master app mounts two independent apps:
 
 - `/api` — in-memory decks/cards/FSRS prototype, **no auth**
 - `/db` — Postgres accounts/cards, **JWT auth** on some routes
@@ -116,7 +116,8 @@ Notes:
 - `POST /db/cards` body: `{"course_id":1,"tag":"...","is_public":false,"front_text":"...","back_text":"..."}`. The DB schema (`accounts`, `cards`) is assumed, not created.
 - `POST /db/users/admin/setup` body: `{"email":"...","password":"...","display_name":"...","role":"..."}`; `role` is ignored and `GlobalAdmin` is always used. The route has no auth.
 - `PATCH /db/cards/{id}/promote` checks `role != "Teacher"`, so `GlobalAdmin` gets 403.
-- Database credentials are hardcoded (`user`/`password`/`localhost:5432`); `DATABASE_URL` is ignored.
+- `DATABASE_URL` is used when set (compose: `postgresql://user:password@card_db:5432/mydb`); without it, credentials fall back to `user`/`password` on `localhost:5432`.
+- The VM volume starts empty: there is no schema/migration, so `/db/login` currently returns 500 against a fresh database. This is not an authentication failure.
 
 ### Example
 
@@ -169,7 +170,7 @@ For design detail see `lti-canvas.md`. These are placeholders, not a contract:
 
 ## Development notes
 
-- `api.js` hardcodes `http://localhost:8000/api`; production must be same-origin (nginx) or configured via env.
+- `api.js` uses `http://localhost:8000/api` in dev and same-origin `/api` in production. nginx proxies `/api/` to `card_backend` without stripping the prefix.
 - `main.py` allows all origins/methods/headers. Tighten before exposing credentials or cookies.
 - The frontend and backend are separate origins in dev. Use a Vite proxy (recommended) or HTTPS plus `SameSite=None; Secure`; `Secure` cookies will not work over plain HTTP.
 - FastAPI’s generated docs are available at `/docs` and `/api/docs`; the `/db` docs are at `/db/docs`.
