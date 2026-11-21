@@ -3,6 +3,7 @@ fastapi==0.136.1
 uvicorn
 pydantic[email]
 starlette
-jwt
+PyJWT[crypto]
 psycopg2
 argon2-cffi 
+python-multipart

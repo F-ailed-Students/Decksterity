@@ -168,6 +168,22 @@ For design detail see `lti-canvas.md`. These are placeholders, not a contract:
 | GET | `/api/courses/{id}/roster` | Teacher/TA-only NRPS roster |
 | POST | `/api/courses/{id}/grade-sync` | Push aggregate score via AGS |
 
+## LTI 1.3 endpoints (Phase 0/1)
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| GET | `/lti/jwks` | none | Tool public JWK for Canvas |
+| GET, POST | `/lti/login` | none | OIDC login initiation |
+| POST | `/lti/launch` | none | Validate launch JWT, create session, redirect to SPA |
+| GET | `/lti/logout` | cookie | Clear the LTI session |
+| GET | `/api/me` | cookie | Current identity, context, role, and permissions |
+
+Notes:
+
+- `LTI_PUBLIC_BASE_URL`, `LTI_ISSUER`, `LTI_CLIENT_ID`, `LTI_DEPLOYMENT_ID`, and `LTI_PRIVATE_KEY_PEM`/`LTI_PRIVATE_KEY_PATH` configure the registration and signing key.
+- Role normalization follows the Canvas TA sub-role rules in `lti-canvas.md`.
+- The endpoints create their own LTI tables on startup. Canvas itself has not been used to verify them yet.
+
 ## Development notes
 
 - `api.js` uses `http://localhost:8000/api` in dev and same-origin `/api` in production. nginx proxies `/api/` to `card_backend` without stripping the prefix.

@@ -96,7 +96,7 @@ Permission rules are not enforced per command under T3 (its session overrides `o
 3. README/Specification claim `/register`, `/auto-login`, `/courses`, `PUT /cards/{id}` — they do not exist. `docs/api.md` is authoritative.
 4. Prod `/api` has no `new` flag and only a `default` deck, so new-card counts and multi-course UX are dev-only (`model.py:221`, `store.js`).
 5. Frontend fixes are unit/component-tested but not browser-verified: dev persistence, direct `/study/:id`, add-card saving, and prod review/stats calls.
-6. Auth is still a localStorage mock (`AuthProvider.jsx`); `AccountMenu` reflects it, but no real token/login exists.
+6. Auth is a localStorage mock in Vite dev; production reads `/api/me` from the LTI session. LTI Phase 0/1 is implemented and locally smoke-tested, but not verified in Canvas.
 
 ## Definition of done
 
