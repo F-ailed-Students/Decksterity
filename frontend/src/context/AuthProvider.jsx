@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AuthContext } from './AuthContext';
+import api from '../api';
 
 const AUTH_STORAGE_KEY = 'sr_account_profile';
 
@@ -24,15 +25,45 @@ function buildUserAccount({ name, email, role = 'Student' }) {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => readStoredUser());
+  const [user, setUser] = useState(() => (import.meta.env.DEV ? readStoredUser() : null));
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+    if (import.meta.env.DEV) {
+      if (user) {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
     }
   }, [user]);
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return;
+
+    let cancelled = false;
+    api.get('/me')
+      .then((response) => {
+        if (cancelled) return;
+        const account = response.data?.user;
+        if (account) {
+          setUser({
+            id: account.id,
+            name: account.name || account.id,
+            email: account.email || '',
+            role: account.role || 'Student',
+          });
+        } else {
+          setUser(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setUser(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const value = useMemo(() => {
     return {

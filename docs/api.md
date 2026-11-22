@@ -113,7 +113,7 @@ Notes:
 
 - `POST /db/login` body: `{"email_address":"...","password":"..."}`. Response: `{"message":"Login successful","access_token":"...","token_type":"bearer"}`.
 - The JWT payload is `{"sub": account_id, "role": type}` and has **no `exp`** (`db.py:192-198`). Nothing revokes tokens.
-- `POST /db/cards` body: `{"course_id":1,"tag":"...","is_public":false,"front_text":"...","back_text":"..."}`. The DB schema (`accounts`, `cards`) is assumed, not created.
+- `POST /db/cards` body: `{"course_id":1,"tag":"...","is_public":false,"front_text":"...","back_text":"..."}`. The `accounts`, `courses`, and `cards` tables are created automatically at startup.
 - `POST /db/users/admin/setup` body: `{"email":"...","password":"...","display_name":"...","role":"..."}`; `role` is ignored and `GlobalAdmin` is always used. The route has no auth.
 - `PATCH /db/cards/{id}/promote` checks `role != "Teacher"`, so `GlobalAdmin` gets 403.
 - `DATABASE_URL` is used when set (compose: `postgresql://user:password@card_db:5432/mydb`); without it, credentials fall back to `user`/`password` on `localhost:5432`.
@@ -167,6 +167,22 @@ For design detail see `lti-canvas.md`. These are placeholders, not a contract:
 | POST | `/api/reviews` | Persist a review for the current identity |
 | GET | `/api/courses/{id}/roster` | Teacher/TA-only NRPS roster |
 | POST | `/api/courses/{id}/grade-sync` | Push aggregate score via AGS |
+
+## LTI 1.3 endpoints (Phase 0/1)
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| GET | `/lti/jwks` | none | Tool public JWK for Canvas |
+| GET, POST | `/lti/login` | none | OIDC login initiation |
+| POST | `/lti/launch` | none | Validate launch JWT, create session, redirect to SPA |
+| GET | `/lti/logout` | cookie | Clear the LTI session |
+| GET | `/api/me` | cookie | Current identity, context, role, and permissions |
+
+Notes:
+
+- `LTI_PUBLIC_BASE_URL`, `LTI_ISSUER`, `LTI_CLIENT_ID`, `LTI_DEPLOYMENT_ID`, and `LTI_PRIVATE_KEY_PEM`/`LTI_PRIVATE_KEY_PATH` configure the registration and signing key.
+- Role normalization follows the Canvas TA sub-role rules in `lti-canvas.md`.
+- The endpoints create their own LTI tables on startup. Canvas itself has not been used to verify them yet.
 
 ## Development notes
 

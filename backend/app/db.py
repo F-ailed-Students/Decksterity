@@ -347,3 +347,50 @@ def delete_user_endpoint(
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail="An error occurred during deletion.")
+import os
+import psycopg2
+
+def init_schema():
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        conn = psycopg2.connect(database_url)
+    else:
+        conn = psycopg2.connect(
+            user="user",
+            password="password",
+            host="localhost",
+            port=5432,
+            dbname="mydb",
+        )
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS accounts (
+                    id SERIAL PRIMARY KEY,
+                    email_address TEXT NOT NULL UNIQUE,
+                    password TEXT NOT NULL,
+                    display_name TEXT,
+                    type TEXT NOT NULL DEFAULT 'Student'
+                );
+                CREATE TABLE IF NOT EXISTS courses (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    created_by INTEGER REFERENCES accounts(id),
+                    date_created TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+                CREATE TABLE IF NOT EXISTS cards (
+                    id SERIAL PRIMARY KEY,
+                    created_by INTEGER REFERENCES accounts(id),
+                    course_id INTEGER,
+                    tag TEXT,
+                    is_public BOOLEAN NOT NULL DEFAULT FALSE,
+                    front_text TEXT NOT NULL,
+                    back_text TEXT NOT NULL,
+                    date_created TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+                """
+            )
+        conn.commit()
+    finally:
+        conn.close()

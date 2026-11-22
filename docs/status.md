@@ -1,6 +1,6 @@
 # Status
 
-**Snapshot:** 2026-11-20 · branch `main` @ `805cd7e` · 61 Vitest tests; Podman stack verified; `/db` schema still absent; browser paths not exercised.
+**Snapshot:** 2026-11-20 · branch `main` @ `378c078` · 61 Vitest tests; Podman stack verified; LTI Phase 0/1 implemented and locally smoke-tested; `/db` schema still absent.
 Update this file whenever work lands. Add a dated line under “Log”, and do not remove unresolved items without exercising the real path.
 
 ## Verified this snapshot
@@ -11,11 +11,11 @@ Update this file whenever work lands. Add a dated line under “Log”, and do n
 | Frontend lint | `npm run lint` (in `frontend/`) | **Passes** — 0 errors, 0 warnings |
 | Frontend tests | `npm test` (in `frontend/`) | **Passes** — 17 files, 61 tests |
 | Backend import | `$env:DECKSTERITY_SECRET_KEY='dev-only'; py -c "import main"` (in `backend/app/`) | **Passes** |
-| Backend runtime / `/db` | curl or TestClient | **Partial** — API up; `/db/login` 500 because tables do not exist |
+| Backend runtime / `/db` | curl or TestClient | **Passes** — schema auto-created; admin setup and login return 200 |
 | Compose stack | `podman compose up --build --force-recreate --detach` | **Passes** — all three containers up; `:3000/api/decks` 200 |
 | DB connection | `podman exec card_backend python -c ...` | **Passes** — `DATABASE_URL` reaches Postgres |
 | Local runner | `.\run.ps1 -Tests` | **Passes** — 61 tests, lint, build, backend import |
-| LTI | — | **Not implemented**; research only |
+| LTI Phase 0/1 | synthetic signed launch + `/api/me` | **Passes locally** — teacher/student role mapping and session cookie verified; not Canvas-tested |
 
 Build, lint, Vitest, the local runner, and the Podman stack pass. Dev persistence, `addCard`, direct `/study/:id`, and production API mapping are covered by unit/component tests, but the real browser paths are not exercised. `/db` connects to Postgres but remains unusable without a schema.
 
@@ -40,7 +40,7 @@ Severity: P0 = blocks running/security-critical, P1 = core feature broken, P2 = 
 | 1 | `POST /db/users/admin/setup` is unauthenticated and creates a `GlobalAdmin` | `db.py:293-302` |
 | 2 | `/api` has no authentication; anyone can create/review cards, and `created_by` is spoofable | `model.py:198-203`, `model.py:239-252` |
 | 3 | `/db` JWTs have no `exp`, so they never expire and cannot be revoked | `db.py:192-198` |
-| 4 | `/db` fails on a fresh database because there is no schema/migration | `db.py:91-101`, `db.py:208-214` |
+| 4 | `/db` schema is created automatically but is not migration-managed; production still needs Alembic/SQL migrations | `db.py` |
 
 ### P1 — core behavior
 
@@ -89,7 +89,7 @@ Frontend and deployment changes are committed. Claim areas here before parallel 
 | Persistence/auth unification | unclaimed | Not started |
 | Frontend refactor/tests | this session | Shared components/hooks extracted; 61 tests; lint/build pass; runtime untested |
 | Frontend data layer fixes | this session | Unit/component-tested; runtime untested |
-| Canvas LTI integration | unclaimed | Design only (`lti-canvas.md`) |
+| Canvas LTI integration | this session | Phase 0/1 implemented in `backend/app/lti.py`; locally smoke-tested; Canvas verification pending |
 
 ## Next steps (recommended order)
 
@@ -118,3 +118,5 @@ Frontend and deployment changes are committed. Claim areas here before parallel 
 - **2026-11-19** — Cleaned `store.js`: unified API error handling, normalized API paths, returned prod `addCard`/`rateCard` requests, parallelized dev aggregate stats, and added prod-store tests.
 - **2026-11-20** — Added root `__pycache__` ignore rules, removed the tracked `.pyc`, and added `run.ps1` for local Vite + API. Verified default startup, `-NoBackend`, and `-Tests` (61 tests, lint, build, backend import).
 - **2026-11-20** — Fixed Podman deployment wiring: compose service names/`DATABASE_URL`, nginx upstream and `/api` prefix, same-origin production API calls, env-driven DB config, non-reload container command, `npm ci`, and Docker build ignores. `podman compose up --build --force-recreate --detach` succeeds; `:3000`, `:3000/api/decks`, and Postgres connectivity verified. `/db` needs schema before its endpoints work.
+- **2026-11-20** — Implemented LTI 1.3 Phase 0/1 in `backend/app/lti.py`: RSA JWKS, OIDC login initiation, signed launch validation, user/context/role upsert, session cookie, `/api/me`, and role permissions. Frontend now reads `/api/me` in production and uses same-origin `/api`/`/lti`. Verified a synthetic signed launch for both Student and Teacher roles locally; not yet verified in Canvas.
+- **2026-11-20** — Added automatic `/db` schema creation for `accounts`, `courses`, and `cards`; verified admin setup and login return 200 against Postgres.
