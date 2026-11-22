@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from db import app as db_app
+from db import init_schema as init_db_schema
 from lti import api_router as lti_api_router
 from lti import init_schema as init_lti_schema
 from lti import lti_router
@@ -30,6 +31,10 @@ master_app.mount("/api", model_app)
 @master_app.on_event("startup")
 def startup():
     try:
+        init_db_schema()
+    except Exception as exc:
+        print(f"DB schema initialization skipped: {exc}")
+    try:
         init_lti_schema()
     except Exception as exc:
         print(f"LTI schema initialization skipped: {exc}")
@@ -38,3 +43,4 @@ def startup():
 if __name__ == "__main__":
     # 4. Tell Uvicorn to run the 'master_app'
     uvicorn.run("main:master_app", host="0.0.0.0", port=8000, reload=True)
+

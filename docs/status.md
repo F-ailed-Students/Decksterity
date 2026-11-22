@@ -11,7 +11,7 @@ Update this file whenever work lands. Add a dated line under “Log”, and do n
 | Frontend lint | `npm run lint` (in `frontend/`) | **Passes** — 0 errors, 0 warnings |
 | Frontend tests | `npm test` (in `frontend/`) | **Passes** — 17 files, 61 tests |
 | Backend import | `$env:DECKSTERITY_SECRET_KEY='dev-only'; py -c "import main"` (in `backend/app/`) | **Passes** |
-| Backend runtime / `/db` | curl or TestClient | **Partial** — API up; `/db/login` 500 because tables do not exist |
+| Backend runtime / `/db` | curl or TestClient | **Passes** — schema auto-created; admin setup and login return 200 |
 | Compose stack | `podman compose up --build --force-recreate --detach` | **Passes** — all three containers up; `:3000/api/decks` 200 |
 | DB connection | `podman exec card_backend python -c ...` | **Passes** — `DATABASE_URL` reaches Postgres |
 | Local runner | `.\run.ps1 -Tests` | **Passes** — 61 tests, lint, build, backend import |
@@ -40,7 +40,7 @@ Severity: P0 = blocks running/security-critical, P1 = core feature broken, P2 = 
 | 1 | `POST /db/users/admin/setup` is unauthenticated and creates a `GlobalAdmin` | `db.py:293-302` |
 | 2 | `/api` has no authentication; anyone can create/review cards, and `created_by` is spoofable | `model.py:198-203`, `model.py:239-252` |
 | 3 | `/db` JWTs have no `exp`, so they never expire and cannot be revoked | `db.py:192-198` |
-| 4 | `/db` fails on a fresh database because there is no schema/migration | `db.py:91-101`, `db.py:208-214` |
+| 4 | `/db` schema is created automatically but is not migration-managed; production still needs Alembic/SQL migrations | `db.py` |
 
 ### P1 — core behavior
 
@@ -119,3 +119,4 @@ Frontend and deployment changes are committed. Claim areas here before parallel 
 - **2026-11-20** — Added root `__pycache__` ignore rules, removed the tracked `.pyc`, and added `run.ps1` for local Vite + API. Verified default startup, `-NoBackend`, and `-Tests` (61 tests, lint, build, backend import).
 - **2026-11-20** — Fixed Podman deployment wiring: compose service names/`DATABASE_URL`, nginx upstream and `/api` prefix, same-origin production API calls, env-driven DB config, non-reload container command, `npm ci`, and Docker build ignores. `podman compose up --build --force-recreate --detach` succeeds; `:3000`, `:3000/api/decks`, and Postgres connectivity verified. `/db` needs schema before its endpoints work.
 - **2026-11-20** — Implemented LTI 1.3 Phase 0/1 in `backend/app/lti.py`: RSA JWKS, OIDC login initiation, signed launch validation, user/context/role upsert, session cookie, `/api/me`, and role permissions. Frontend now reads `/api/me` in production and uses same-origin `/api`/`/lti`. Verified a synthetic signed launch for both Student and Teacher roles locally; not yet verified in Canvas.
+- **2026-11-20** — Added automatic `/db` schema creation for `accounts`, `courses`, and `cards`; verified admin setup and login return 200 against Postgres.

@@ -113,7 +113,7 @@ Notes:
 
 - `POST /db/login` body: `{"email_address":"...","password":"..."}`. Response: `{"message":"Login successful","access_token":"...","token_type":"bearer"}`.
 - The JWT payload is `{"sub": account_id, "role": type}` and has **no `exp`** (`db.py:192-198`). Nothing revokes tokens.
-- `POST /db/cards` body: `{"course_id":1,"tag":"...","is_public":false,"front_text":"...","back_text":"..."}`. The DB schema (`accounts`, `cards`) is assumed, not created.
+- `POST /db/cards` body: `{"course_id":1,"tag":"...","is_public":false,"front_text":"...","back_text":"..."}`. The `accounts`, `courses`, and `cards` tables are created automatically at startup.
 - `POST /db/users/admin/setup` body: `{"email":"...","password":"...","display_name":"...","role":"..."}`; `role` is ignored and `GlobalAdmin` is always used. The route has no auth.
 - `PATCH /db/cards/{id}/promote` checks `role != "Teacher"`, so `GlobalAdmin` gets 403.
 - `DATABASE_URL` is used when set (compose: `postgresql://user:password@card_db:5432/mydb`); without it, credentials fall back to `user`/`password` on `localhost:5432`.
